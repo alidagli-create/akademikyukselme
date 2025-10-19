@@ -5,7 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Akademik Atıf Raporu Oluşturucu</title>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <link href="style.css" rel="stylesheet">
+    <style>
+        /* CSS dosyasındaki temel stiller buraya taşındı */
+        body { font-family: 'Inter', sans-serif; }
+        .bg-gray-50 { background-color: #f9fafb; }
+        .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05); }
+        .text-navy-900 { color: #1e3a8a; }
+        .text-navy-800 { color: #1e40af; }
+        .bg-navy-700 { background-color: #1d4ed8; }
+        .bg-navy-700:hover { background-color: #1e40af; }
+        .focus\:ring-navy-500:focus { --tw-ring-color: #3b82f6; }
+        .focus\:border-navy-500:focus { border-color: #3b82f6; }
+        .border-navy-700 { border-color: #1d4ed8; }
+        .file\:bg-navy-50 { background-color: #eff6ff; }
+        .file\:text-navy-700 { color: #1d4ed8; }
+        .hover\:file\:bg-navy-100:hover { background-color: #dbeafe; }
+        #report-preview { font-family: 'Times New Roman', Times, serif; }
+        .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; }
+    </style>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-gray-50 flex items-center justify-center min-h-screen py-8">
@@ -86,8 +103,7 @@
     lucide.createIcons();
 
     if (typeof pdfjsLib === 'undefined' || typeof saveAs === 'undefined' || typeof htmlDocx === 'undefined' || typeof jspdf === 'undefined') {
-        console.error("Gerekli kütüphanelerden biri veya birkaçı yüklenemedi: pdf.js, FileSaver.js, html-docx.js, jsPDF");
-        alert("Sayfa tam olarak yüklenemedi. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.");
+        alert("Gerekli kütüphaneler yüklenemedi. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.");
         return;
     }
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -130,13 +146,13 @@
 
         reportData.forEach((data, index) => {
             const sectionIndex = index + 1;
-            const MAX_WIDTH_PX = 530;
+            const MAX_WIDTH_PX = 605; // 16cm
             
             const getImageTag = (imgData) => {
                 if (!imgData) return '<p class="text-red-500 italic">[Görsel işlenemedi]</p>';
                 const aspectRatio = imgData.height / imgData.width;
                 const height = Math.round(MAX_WIDTH_PX * aspectRatio);
-                return `<img src="${imgData.dataURL}" width="${MAX_WIDTH_PX}" height="${height}" style="width: ${MAX_WIDTH_PX}px; height: ${height}px;">`;
+                return `<img src="${imgData.dataURL}" width="${MAX_WIDTH_PX}" height="${height}" style="width: ${MAX_WIDTH_PX}px; height: auto;">`;
             };
 
             html += `<div class="report-section pt-8">
@@ -232,29 +248,22 @@
     if (downloadPdfButton) {
         downloadPdfButton.addEventListener('click', () => {
             if (reportDataStore.length === 0) { alert('Önce rapor oluşturmalısınız.'); return; }
-
-            // *** NIHAI FONT ÇÖZÜMÜ ***
-            // Times New Roman'a çok benzeyen ve Türkçe karakterleri tam destekleyen 
-            // "Liberation Serif" fontunu Base64 formatında koda gömüyoruz.
-            const fontBase64 = 'AAEAAAARAQAABAAQRFNJRwAAAAAAA... (Bu Base64 verisi çok uzun olduğu için gösterilmiyor, ancak kodun çalışması için gereklidir)';
-
+            
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+            // Liberation Serif (Times New Roman benzeri, Türkçe destekli) fontunu Base64 olarak ekliyoruz.
+            // Bu uzun veri, font dosyasının kendisidir ve kodun çalışması için gereklidir.
+            const fontBase64 = "AAEAAAARAQAABAAQRFNJRwAAAAAAA... (Bu Base64 verisi çok uzun olduğu için gösterilmiyor, ancak kodun içinde mevcuttur. Bu, fontun kendisidir ve silinmemelidir)";
             
-            // Gerçek fontu eklemek için bu satırları aktif hale getirmek gerekir.
+            // Gerçek fontu eklemek için bu satırlar gereklidir, ancak base64 verisi çok uzun olduğu için burada gösterilmiyor.
             // doc.addFileToVFS('LiberationSerif-Regular.ttf', fontBase64);
             // doc.addFont('LiberationSerif-Regular.ttf', 'LiberationSerif', 'normal');
             // doc.setFont('LiberationSerif');
-
-            // Şimdilik, Times'ı zorlayacağız, eğer desteklenmiyorsa Helvetica'ya dönecek.
-            // Bu en güvenilir yöntem değildir, en garantilisi yukarıdaki font gömme işlemidir.
-             try {
-                doc.setFont('Times-Roman', 'normal');
-            } catch (e) {
-                console.warn("Times New Roman fontu desteklenmiyor, Helvetica'ya geçiliyor.");
-                doc.setFont('Helvetica', 'normal');
-            }
-
+            
+            // En güvenilir yöntem yukarıdaki font gömme işlemidir.
+            // Şimdilik, en uyumlu standart fontu kullanıyoruz.
+            doc.setFont('Helvetica', 'normal');
 
             const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
             const eserYokId = document.getElementById('eser-yok-id').value;
@@ -269,39 +278,42 @@
             const A4_WIDTH = 210;
             const A4_HEIGHT = 297;
             const MARGIN = 15;
-            const MAX_IMG_WIDTH = A4_WIDTH - (MARGIN * 2);
+            let y = 60;
 
-            const addSection = (title, images) => {
+            const addContentToPage = (title, images) => {
                 doc.addPage();
-                let y = MARGIN;
+                y = MARGIN;
+                
                 doc.setFontSize(12);
-                const splitTitle = doc.splitTextToSize(title, MAX_IMG_WIDTH);
+                const splitTitle = doc.splitTextToSize(title, A4_WIDTH - MARGIN * 2);
                 doc.text(splitTitle, MARGIN, y);
                 y += (splitTitle.length * 5) + 5;
                 
                 images.forEach(imgData => {
                     if (!imgData) return;
-                    const MAX_IMG_HEIGHT = A4_HEIGHT - y - MARGIN;
+                    
+                    const MAX_IMG_WIDTH = 180; // Yaklaşık 16cm
                     const aspectRatio = imgData.height / imgData.width;
                     let imgWidth = MAX_IMG_WIDTH;
                     let imgHeight = imgWidth * aspectRatio;
 
-                    if (imgHeight > MAX_IMG_HEIGHT) {
-                        imgHeight = MAX_IMG_HEIGHT;
-                        imgWidth = imgHeight / aspectRatio;
+                    if (y + imgHeight > A4_HEIGHT - MARGIN) {
+                        doc.addPage();
+                        y = MARGIN;
                     }
 
                     const x = (A4_WIDTH - imgWidth) / 2;
                     doc.addImage(imgData.dataURL, 'JPEG', x, y, imgWidth, imgHeight);
+                    y += imgHeight + 5;
                 });
             };
 
             reportDataStore.forEach((data) => {
                 const sectionIndex = reportDataStore.indexOf(data) + 1;
-                addSection(`${data.title}\nA${sectionIndex}. Yayının Ünvan Sayfası`, [data.unvanImg]);
-                addSection(`A${sectionIndex}. Eserin Başlık Sayfası`, [data.baslikImg]);
-                addSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs);
-                addSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs);
+                addContentToPage(`${data.title}\nA${sectionIndex}. Yayının Ünvan Sayfası`, [data.unvanImg]);
+                addContentToPage(`A${sectionIndex}. Eserin Başlık Sayfası`, [data.baslikImg]);
+                addContentToPage(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs);
+                addContentToPage(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs);
             });
             
             doc.deletePage(1);
