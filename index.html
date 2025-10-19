@@ -107,33 +107,53 @@
     let reportDataStore = [];
 
     const extractTitleWithGemini = async (imageDataUrl) => {
-        // *** GÜNCELLENDİ: API çağrısı artık güvenli arka yüze yapılıyor ***
-        const base64Data = imageDataUrl.split(',')[1];
+        // *** DİKKAT: API ANAHTARI GEREKLİ ***
+        // Google AI Studio'dan aldığınız API anahtarınızı aşağıdaki tırnak işaretlerinin arasına yapıştırın.
+        // ÖNEMLİ: Bu dosyayı içeren GitHub deponuzun "Private" (Özel) olduğundan emin olun!
+        const apiKey = "YAPAY_ZEKA_ANAHTARINIZI_BURAYA_YAPIŞTIRIN"; 
         
+        if (apiKey === "YAPAY_ZEKA_ANAHTARINIZI_BURAYA_YAPIŞTIRIN" || !apiKey) {
+            console.error("Gemini API Anahtarı Girilmemiş veya Geçersiz!");
+            alert("Uygulamanın çalışması için geçerli bir Gemini API anahtarı girilmelidir.");
+            return null;
+        }
+
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const base64Data = imageDataUrl.split(',')[1];
+        const payload = {
+            "contents": [{
+                "parts": [
+                    { "text": "Bu akademik makale sayfasındaki en büyük ve en belirgin metin olan ana başlığı çıkar. Sadece ve sadece tam başlığı döndür, başka hiçbir açıklama, yazar adı veya ek metin ekleme." },
+                    { "inline_data": { "mime_type": "image/jpeg", "data": base64Data } }
+                ]
+            }]
+        };
+
         try {
-            // Netlify'da bu URL, 'get-title.js' adlı yardımcıyı çalıştırır.
-            const response = await fetch('/.netlify/functions/get-title', { 
-                method: 'POST',
-                body: JSON.stringify({ image: base64Data })
-            });
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
-                console.error("Yardımcıya yapılan istek başarısız oldu:", await response.text());
+                const errorBody = await response.text();
+                console.error("Gemini API Error Response:", response.status, errorBody);
                 return null;
             }
             const data = await response.json();
-            return data.title;
+            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+                 return data.candidates[0].content.parts[0].text.trim().replace(/\n/g, ' ');
+            }
+            console.warn("Gemini'den beklenen formatta bir cevap alınamadı:", data);
+            return null;
         } catch (error) {
-            console.error("Yardımcıya bağlanırken hata oluştu:", error);
+            console.error("Gemini API'ye bağlanırken hata oluştu:", error);
             return null;
         }
     };
     
-    const processPdfPage = async (pdfDoc, pageNum, scale = 2.0) => {
+    const processPdfPage = async (pdfDoc, pageNum, scale = 2.5) => {
         try {
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
             const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
+            const context = canvas.getContext('2d', { willReadFrequently: true }); // Performans uyarısı için
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             await page.render({ canvasContext: context, viewport: viewport }).promise;
@@ -231,7 +251,7 @@
                     const citUrl = URL.createObjectURL(citFile);
                     const citPdfDoc = await pdfjsLib.getDocument(citUrl).promise;
 
-                    const firstPageImage = await processPdfPage(citPdfDoc, 1);
+                    const firstPageImage = await processPdfPage(citPdfDoc, 1, 2.5);
                     if (firstPageImage) {
                          feedbackText.textContent = `Atıf ${i + 1} başlığı yapay zeka ile taranıyor...`;
                          const extractedTitle = await extractTitleWithGemini(firstPageImage.dataURL);
