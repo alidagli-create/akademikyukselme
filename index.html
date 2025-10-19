@@ -107,18 +107,18 @@
     let reportDataStore = [];
 
     const extractTitleWithGemini = async (imageDataUrl) => {
-        // *** DİKKAT: API ANAHTARI GEREKLİ ***
-        // Google AI Studio'dan aldığınız API anahtarınızı aşağıdaki tırnak işaretlerinin arasına yapıştırın.
-        // ÖNEMLİ: Bu dosyayı içeren GitHub deponuzun "Private" (Özel) olduğundan emin olun!
         const apiKey = "AIzaSyBaQW1iOyXFvRRPb-2ivLs8qfh8q9dtopc"; 
         
+        // *** DÜZELTME BURADA ***
+        // Bu kontrol, anahtarın hala varsayılan metin olup olmadığını kontrol eder.
+        // Kendi anahtarınızı yukarıya yapıştırdığınızda bu kontrol doğru çalışacaktır.
         if (apiKey === "YAPAY_ZEKA_ANAHTARINIZI_BURAYA_YAPIŞTIRIN" || !apiKey) {
             console.error("Gemini API Anahtarı Girilmemiş veya Geçersiz!");
             alert("Uygulamanın çalışması için geçerli bir Gemini API anahtarı girilmelidir.");
             return null;
         }
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-25:generateContent?key=${apiKey}`;
         const base64Data = imageDataUrl.split(',')[1];
         const payload = {
             "contents": [{
@@ -148,12 +148,11 @@
         }
     };
     
-    const processPdfPage = async (pdfDoc, pageNum, scale = 2.5) => {
+    const processPdfPage = async (pdfDoc, pageNum, scale = 2.0) => {
         try {
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
             const canvas = document.createElement('canvas');
-            // *** DÜZELTME BURADA: Tarayıcıya performans ipucu veriliyor ***
             const context = canvas.getContext('2d', { willReadFrequently: true });
             canvas.height = viewport.height;
             canvas.width = viewport.width;
@@ -252,7 +251,7 @@
                     const citUrl = URL.createObjectURL(citFile);
                     const citPdfDoc = await pdfjsLib.getDocument(citUrl).promise;
 
-                    const firstPageImage = await processPdfPage(citPdfDoc, 1, 2.5);
+                    const firstPageImage = await processPdfPage(citPdfDoc, 1);
                     if (firstPageImage) {
                          feedbackText.textContent = `Atıf ${i + 1} başlığı yapay zeka ile taranıyor...`;
                          const extractedTitle = await extractTitleWithGemini(firstPageImage.dataURL);
