@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadDocxButton = document.getElementById('download-docx');
     const downloadPdfButton = document.getElementById('download-pdf');
 
+    // PDF sayfasını bir resim (canvas) olarak çizen fonksiyon
     const renderPdfPageToCanvas = async (pdfDoc, pageNum, scale = 1.5) => {
         try {
             const page = await pdfDoc.getPage(pageNum);
@@ -23,7 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-            canvas.className = 'border shadow-md max-w-full mx-auto';
+            canvas.style.maxWidth = '100%';
+            canvas.style.height = 'auto';
+            canvas.className = 'border shadow-md mx-auto mb-4'; // Resimler arasına boşluk ekledik
             await page.render({ canvasContext: context, viewport: viewport }).promise;
             return canvas;
         } catch (e) {
@@ -35,20 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const findHighlightAnnotations = async (pdfDoc) => {
-        const highlights = [];
-        for (let i = 1; i <= pdfDoc.numPages; i++) {
-            const page = await pdfDoc.getPage(i);
-            const annotations = await page.getAnnotations();
-            annotations
-                .filter(ann => ann.subtype === 'Highlight')
-                .forEach(ann => {
-                    highlights.push({ pageNum: i, annotation: ann });
-                });
-        }
-        return highlights;
-    };
-    
     const createPlaceholder = (text) => {
         const placeholder = document.createElement('div');
         placeholder.className = 'placeholder-content border shadow-md p-4 text-gray-500 italic bg-gray-50 h-64 flex items-center justify-center';
@@ -56,11 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return placeholder;
     };
 
-
     if (reportForm) {
         reportForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-
             if (!reportForm.checkValidity()) {
                 reportForm.reportValidity();
                 return;
@@ -75,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  alert('Lütfen hem atıf hem de yayın bilgisi PDF dosyalarını seçin.');
                  return;
             }
-            
             if (citationFiles.length !== publicationInfoPdfs.length) {
                 alert('Atıf PDF sayısı ile yayın bilgisi PDF sayısı eşit olmalıdır.');
                 return;
@@ -90,13 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const sortedPublicationPdfs = Array.from(publicationInfoPdfs).sort((a, b) => a.name.localeCompare(b.name));
 
             reportPreview.innerHTML = '';
-
             const mainHeader = document.createElement('div');
             mainHeader.className = 'text-center mb-12 not-prose';
             mainHeader.innerHTML = `
-                <h1 class="text-3xl font-bold text-navy-900">${eserAdi}</h1>
-                <p class="text-xl text-gray-600 mt-1">YÖK ID: ${eserYokId}</p>
-                <h2 class="text-2xl font-bold mt-8 border-t border-gray-200 pt-4 text-navy-900">Atıflar</h2>
+                <h1 class="text-3xl font-bold text-navy-900" style="font-family: 'Times New Roman', serif;">${eserAdi}</h1>
+                <p class="text-xl text-gray-600 mt-1" style="font-family: 'Times New Roman', serif;">YÖK ID: ${eserYokId}</p>
+                <h2 class="text-2xl font-bold mt-8 border-t border-gray-200 pt-4 text-navy-900" style="font-family: 'Times New Roman', serif;">Atıflar</h2>
             `;
             reportPreview.appendChild(mainHeader);
 
@@ -108,34 +93,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 const section = document.createElement('div');
                 section.className = 'report-section pt-8';
                 
-                section.innerHTML = `<h3 class="text-xl font-bold mb-4">Atıf ${sectionIndex}</h3>`;
+                const atifTitle = citFile.name.replace('.pdf', '');
+                section.innerHTML = `<h3 class="text-xl font-bold mb-4" style="font-family: 'Times New Roman', serif;">${sectionIndex}. ${atifTitle}</h3>`;
 
+                // Bölüm 1: Yayın Unvan Sayfası
                 const unvanDiv = document.createElement('div');
                 unvanDiv.className = 'mb-8 break-inside-avoid';
-                unvanDiv.innerHTML = `<h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Yayının Ünvan Sayfası</h4>`;
+                unvanDiv.innerHTML = `<h4 class="text-lg font-semibold mb-2" style="font-family: 'Times New Roman', serif;">A${sectionIndex}. Yayının Ünvan Sayfası</h4>`;
                 unvanDiv.appendChild(createPlaceholder('[Yayın bilgisi yükleniyor...]'));
                 section.appendChild(unvanDiv);
 
+                // Bölüm 2: Eserin Başlık Sayfası
                 const baslikDiv = document.createElement('div');
                 baslikDiv.className = 'mb-8 break-inside-avoid';
-                baslikDiv.innerHTML = `<h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Eserin Başlık Sayfası</h4>`;
+                baslikDiv.innerHTML = `<h4 class="text-lg font-semibold mb-2" style="font-family: 'Times New Roman', serif;">A${sectionIndex}. Eserin Başlık Sayfası</h4>`;
                 baslikDiv.appendChild(createPlaceholder('[Eser başlık sayfası yükleniyor...]'));
                 section.appendChild(baslikDiv);
 
+                // Bölüm 3: İlk Atıf Yapılan Sayfa
                 const atifDiv = document.createElement('div');
                 atifDiv.className = 'mb-8 break-inside-avoid';
-                atifDiv.innerHTML = `<h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Eserde ilk atıf yapılan sayfa</h4>`;
-                atifDiv.appendChild(createPlaceholder('[Vurgular aranıyor...]'));
+                atifDiv.innerHTML = `<h4 class="text-lg font-semibold mb-2" style="font-family: 'Times New Roman', serif;">A${sectionIndex}. Eserde ilk atıf yapılan sayfa</h4>`;
                 section.appendChild(atifDiv);
 
+                // Bölüm 4: Kaynakça Sayfası
                 const kaynakcaDiv = document.createElement('div');
                 kaynakcaDiv.className = 'mb-8 break-inside-avoid';
-                kaynakcaDiv.innerHTML = `<h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Kaynakça Sayfası</h4>`;
-                kaynakcaDiv.appendChild(createPlaceholder('[Vurgular aranıyor...]'));
+                kaynakcaDiv.innerHTML = `<h4 class="text-lg font-semibold mb-2" style="font-family: 'Times New Roman', serif;">A${sectionIndex}. Kaynakça Sayfası</h4>`;
                 section.appendChild(kaynakcaDiv);
 
                 reportPreview.appendChild(section);
 
+                // Yayın Bilgisi PDF'ini işle (her zaman ilk sayfa)
                 try {
                     const pubUrl = URL.createObjectURL(pubFile);
                     const pubPdfDoc = await pdfjsLib.getDocument(pubUrl).promise;
@@ -144,52 +133,52 @@ document.addEventListener('DOMContentLoaded', () => {
                     URL.revokeObjectURL(pubUrl);
                 } catch(e) { unvanDiv.querySelector('.placeholder-content').textContent = `[PDF işlenemedi: ${e.message}]`; }
 
+                // Atıf PDF'ini işle (yeni kurallara göre)
                 try {
                     const citUrl = URL.createObjectURL(citFile);
                     const citPdfDoc = await pdfjsLib.getDocument(citUrl).promise;
+                    const totalPages = citPdfDoc.numPages;
                     
+                    // Madde 2 (Başlık Sayfası) her zaman 1. sayfadır
                     const baslikCanvas = await renderPdfPageToCanvas(citPdfDoc, 1);
                     baslikDiv.querySelector('.placeholder-content').replaceWith(baslikCanvas);
                     
-                    const allHighlights = await findHighlightAnnotations(citPdfDoc);
-                    const atifPlaceholder = atifDiv.querySelector('.placeholder-content');
-                    const kaynakcaPlaceholder = kaynakcaDiv.querySelector('.placeholder-content');
+                    // *** YENİ KURAL MANTIĞI BURADA BAŞLIYOR ***
 
-                    if (allHighlights.length === 0) {
-                        atifPlaceholder.textContent = '[Atıf vurgusu bulunamadı.]';
-                        kaynakcaPlaceholder.textContent = '[Kaynakça vurgusu bulunamadı.]';
-                    } else {
-                        const firstHighlight = allHighlights[0];
-                        const firstCanvas = await renderPdfPageToCanvas(citPdfDoc, firstHighlight.pageNum);
-                        atifPlaceholder.replaceWith(firstCanvas);
-
-                        const firstPage = await citPdfDoc.getPage(firstHighlight.pageNum);
-                        const firstViewport = firstPage.getViewport({ scale: 1 });
-                        if (firstHighlight.annotation.rect[1] < firstViewport.height * 0.15 && firstHighlight.pageNum < citPdfDoc.numPages) {
-                             const overflowCanvas = await renderPdfPageToCanvas(citPdfDoc, firstHighlight.pageNum + 1);
-                             atifDiv.appendChild(overflowCanvas);
-                        }
-                        
-                        if (allHighlights.length > 1) {
-                            const lastHighlight = allHighlights[allHighlights.length - 1];
-                            const lastCanvas = await renderPdfPageToCanvas(citPdfDoc, lastHighlight.pageNum);
-                            kaynakcaPlaceholder.replaceWith(lastCanvas);
-
-                            const lastPage = await citPdfDoc.getPage(lastHighlight.pageNum);
-                            const lastViewport = lastPage.getViewport({ scale: 1 });
-                            if (lastHighlight.annotation.rect[1] < lastViewport.height * 0.15 && lastHighlight.pageNum < citPdfDoc.numPages) {
-                                const overflowCanvas = await renderPdfPageToCanvas(citPdfDoc, lastHighlight.pageNum + 1);
-                                kaynakcaDiv.appendChild(overflowCanvas);
-                            }
-                        } else {
-                             kaynakcaPlaceholder.textContent = '[Sadece bir vurgu bulundu, kaynakça için ayrı bir vurgu yok.]';
-                        }
+                    if (totalPages <= 1) {
+                        atifDiv.appendChild(createPlaceholder('[PDF tek sayfalı, atıf için ek sayfa yok.]'));
+                        kaynakcaDiv.appendChild(createPlaceholder('[PDF tek sayfalı, kaynakça için ek sayfa yok.]'));
+                    } else if (totalPages === 2) {
+                        // Madde 3: ilk sayfa
+                        atifDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 1));
+                        // Madde 4: ikinci sayfa
+                        kaynakcaDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 2));
+                    } else if (totalPages === 3) {
+                        // Madde 3: ikinci sayfa
+                        atifDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 2));
+                        // Madde 4: üçüncü sayfa
+                        kaynakcaDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 3));
+                    } else if (totalPages === 4) {
+                        // Madde 3: 2. ve 3. sayfalar
+                        atifDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 2));
+                        atifDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 3));
+                        // Madde 4: 4. sayfa
+                        kaynakcaDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 4));
+                    } else { // 5 veya daha fazla sayfa
+                        // Madde 3: 2. ve 3. sayfalar
+                        atifDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 2));
+                        atifDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 3));
+                        // Madde 4: 4. ve 5. sayfalar
+                        kaynakcaDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 4));
+                        kaynakcaDiv.appendChild(await renderPdfPageToCanvas(citPdfDoc, 5));
                     }
+
                     URL.revokeObjectURL(citUrl);
                 } catch(e) { 
-                    baslikDiv.querySelector('.placeholder-content').textContent = `[PDF işlenemedi: ${e.message}]`;
-                    atifDiv.querySelector('.placeholder-content').textContent = `[PDF işlenemedi: ${e.message}]`;
-                    kaynakcaDiv.querySelector('.placeholder-content').textContent = `[PDF işlenemedi: ${e.message}]`;
+                    baslikDiv.querySelector('.placeholder-content')?.remove();
+                    baslikDiv.appendChild(createPlaceholder(`[PDF işlenemedi: ${e.message}]`));
+                    atifDiv.appendChild(createPlaceholder(`[PDF işlenemedi: ${e.message}]`));
+                    kaynakcaDiv.appendChild(createPlaceholder(`[PDF işlenemedi: ${e.message}]`));
                 }
             }
 
@@ -199,50 +188,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // İndirme fonksiyonları öncekiyle aynı, onlarda bir değişiklik yok.
     if (downloadDocxButton) {
         downloadDocxButton.addEventListener('click', () => {
             const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
-            const fileName = `${eserAdi.trim().replace(new RegExp('[\\\\\\\\/:*?\\\"<>|]', 'g'), '').replace(new RegExp('\\s+', 'g'), '_')}_Raporu.docx`;
-            
+            const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
             const reportContent = document.getElementById('report-preview').cloneNode(true);
-
             reportContent.querySelectorAll('canvas').forEach(canvas => {
                 const img = document.createElement('img');
-                img.src = canvas.toDataURL('image/png');
-                img.width = canvas.width;
-                img.height = canvas.height;
-                img.style.maxWidth = '100%';
+                img.src = canvas.toDataURL('image/png', 0.9);
+                img.style.width = '100%';
+                img.style.height = 'auto';
                 canvas.parentNode.replaceChild(img, canvas);
             });
-            
-            const content = `<!DOCTYPE html><html><head><meta charset=\\"UTF-8\\"><style>img { max-width: 100%; height: auto; max-height: 700px; object-fit: contain; display: block; } .report-section { page-break-before: always; } .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; } </style></head><body>${reportContent.innerHTML}</body></html>`;
-
+            const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } img { max-width: 100%; height: auto; display: block; margin: 16px 0; } .report-section { page-break-before: always; } .break-inside-avoid { page-break-inside: avoid; } </style></head><body>${reportContent.innerHTML}</body></html>`;
             try {
-                const converted = htmlDocx.asBlob(content);
+                const converted = htmlDocx.asBlob(content, { orientation: 'portrait', margins: { top: 720, right: 720, bottom: 720, left: 720 } });
                 saveAs(converted, fileName);
-            } catch(e) {
-                console.error('Word export failed:', e);
-                alert('Rapor Word dosyasına dönüştürülürken bir hata oluştu.');
-            }
+            } catch(e) { console.error('Word export failed:', e); alert('Rapor Word dosyasına dönüştürülürken bir hata oluştu.'); }
         });
     }
     
     if (downloadPdfButton) {
         downloadPdfButton.addEventListener('click', () => {
             const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
-            const fileName = `${eserAdi.trim().replace(new RegExp('[\\\\\\\\/:*?\\\"<>|]', 'g'), '').replace(new RegExp('\\s+', 'g'), '_')}_Raporu.pdf`;
+            const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.pdf`;
             const element = document.getElementById('report-preview');
-
-            const opt = {
-                margin:       [0.5, 0.5, 0.5, 0.5],
-                filename:     fileName,
-                image:        { type: 'jpeg', quality: 0.7 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'avoid-all'], before: '.report-section' }
-            };
-
-            html2pdf().from(element).set(opt).save();
+            const opt = { margin: [0.7, 0.7, 0.7, 0.7], filename: fileName, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, logging: false, dpi: 192, letterRendering: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['css', 'avoid-all'], before: '.report-section' } };
+            setTimeout(() => { html2pdf().from(element).set(opt).save(); }, 500);
         });
     }
 });
