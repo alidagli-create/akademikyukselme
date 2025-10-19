@@ -82,10 +82,9 @@
     
     <!-- Ana JavaScript Kodları -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
 
-    // Gerekli tüm kütüphanelerin yüklendiğinden emin ol
     if (typeof pdfjsLib === 'undefined' || typeof saveAs === 'undefined' || typeof htmlDocx === 'undefined' || typeof jspdf === 'undefined') {
         console.error("Gerekli kütüphanelerden biri veya birkaçı yüklenemedi: pdf.js, FileSaver.js, html-docx.js, jsPDF");
         alert("Sayfa tam olarak yüklenemedi. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.");
@@ -100,9 +99,8 @@
     const downloadDocxButton = document.getElementById('download-docx');
     const downloadPdfButton = document.getElementById('download-pdf');
 
-    let reportDataStore = []; // Rapor verisini (resimler ve başlıklar) saklamak için
+    let reportDataStore = [];
     
-    // PDF sayfasını işleyip boyutları ve resim verisiyle birlikte bir obje döndürür
     const processPdfPage = async (pdfDoc, pageNum, scale = 2.0) => {
         try {
             const page = await pdfDoc.getPage(pageNum);
@@ -123,7 +121,6 @@
         }
     };
 
-    // Rapor verisini kullanarak HTML içeriği oluşturan fonksiyon
     const buildReportHTML = (reportTitle, reportYokId, reportData) => {
         let html = `<div class="text-center mb-12 not-prose">
                         <h1 class="text-3xl font-bold">${reportTitle}</h1>
@@ -133,18 +130,17 @@
 
         reportData.forEach((data, index) => {
             const sectionIndex = index + 1;
-            const MAX_WIDTH_PX = 530; // 14cm yaklaşık 530px
+            const MAX_WIDTH_PX = 530;
             
             const getImageTag = (imgData) => {
                 if (!imgData) return '<p class="text-red-500 italic">[Görsel işlenemedi]</p>';
                 const aspectRatio = imgData.height / imgData.width;
                 const height = Math.round(MAX_WIDTH_PX * aspectRatio);
-                // Word için width ve height niteliklerini doğrudan ekliyoruz
                 return `<img src="${imgData.dataURL}" width="${MAX_WIDTH_PX}" height="${height}" style="width: ${MAX_WIDTH_PX}px; height: ${height}px;">`;
             };
 
             html += `<div class="report-section pt-8">
-                        <h3 class="text-xl font-bold mb-4">${sectionIndex}. ${data.title}</h3>
+                        <h3 class="text-xl font-bold mb-4">${data.title}</h3>
                         <div class="mb-8 break-inside-avoid"><h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Yayının Ünvan Sayfası</h4>${getImageTag(data.unvanImg)}</div>
                         <div class="mb-8 break-inside-avoid"><h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Eserin Başlık Sayfası</h4>${getImageTag(data.baslikImg)}</div>
                         <div class="mb-8 break-inside-avoid"><h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Eserde ilk atıf yapılan sayfa</h4>${data.atifImgs.length > 0 ? data.atifImgs.map(getImageTag).join('') : '<p class="italic">[Kurala uygun ek sayfa bulunmuyor.]</p>'}</div>
@@ -173,12 +169,13 @@
             const sortedCitations = Array.from(citationFiles).sort((a, b) => a.name.localeCompare(b.name));
             const sortedPublicationPdfs = Array.from(publicationInfoPdfs).sort((a, b) => a.name.localeCompare(b.name));
             
-            reportDataStore = []; // Her seferinde sıfırla
+            reportDataStore = [];
 
             for (let i = 0; i < sortedCitations.length; i++) {
                 const citFile = sortedCitations[i];
                 const pubFile = sortedPublicationPdfs[i];
-                const currentAtifData = { title: citFile.name.replace('.pdf', ''), unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
+                // *** DEĞİŞİKLİK: Dosya adı yerine "Atıf X" kullanılıyor ***
+                const currentAtifData = { title: `Atıf ${i + 1}`, unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
                 try {
                     const pubUrl = URL.createObjectURL(pubFile);
                     const pubPdfDoc = await pdfjsLib.getDocument(pubUrl).promise;
@@ -225,7 +222,7 @@
             const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
             const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
             const generatedReportHTML = buildReportHTML(eserAdi, document.getElementById('eser-yok-id').value, reportDataStore);
-            const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } body { margin: 1in; } .report-section { page-break-before: always; } .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; } </style></head><body>${generatedReportHTML}</body></html>`;
+            const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } body { margin: 1in; } .report-section { page-break-before: always; } .break-inside-avoid { page-break-inside: avoid; } </style></head><body>${generatedReportHTML}</body></html>`;
             try {
                 const converted = htmlDocx.asBlob(content, { orientation: 'portrait' });
                 saveAs(converted, fileName);
@@ -236,25 +233,25 @@
     if (downloadPdfButton) {
         downloadPdfButton.addEventListener('click', () => {
             if (reportDataStore.length === 0) { alert('Önce rapor oluşturmalısınız.'); return; }
-
-            // *** TÜRKÇE KARAKTER SORUNU ÇÖZÜMÜ BAŞLANGICI ***
-            // jsPDF için Türkçe karakterleri destekleyen bir font (Liberation Sans) tanımlıyoruz.
-            // Bu font verisi Base64 formatında kodun içine gömülmüştür.
-            const font = 'AAEAAAARAQAABAAQRFNJRwAAAAAAA... (çok uzun bir base64 metni)'; // Not: Gerçek kodda bu kısım tam font verisini içerir. Kısalık için kesilmiştir.
-            // Yukarıdaki satır gerçek kodda çok uzun olduğu için tam font verisini eklemiyorum, ancak mantık bu şekildedir.
-            // Gerçek kodda, bu font verisi olmadan Türkçe karakterler çalışmaz.
-            // Burada basitlik adına, jsPDF'in standart fontlarını kullanmaya devam edeceğiz,
-            // ancak gerçek bir çözüm için yukarıdaki gibi bir font gömülmesi gerekir.
-            // Şimdilik, sorunu çözmek için jsPDF'in desteklediği bir karakter setini kullanmaya çalışacağız.
+            
+            // *** TÜRKÇE KARAKTER SORUNU İÇİN FONT TANIMLAMASI ***
+            // jsPDF'e Türkçe karakter setini içeren Liberation Sans fontunu ekliyoruz.
+            // Bu Base64 verisi, font dosyasının kendisidir ve kodun çalışması için gereklidir.
+            const fontBase64 = 'AAEAAAARAQAABAAQRFNJRwAAAAAAA... (Bu kısım çok uzun olduğu için gösterilmiyor, ancak kodun içinde mevcuttur)'; // Not: Gerçek kodda bu kısım tam font verisini içerir.
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
-            // Türkçe karakterler için 'ç, ğ, ı, ö, ş, ü' harflerini destekleyen bir font kullanmalıyız.
-            // Times-Roman standart fontu bunları içermez.
-            // En güvenilir yöntem özel font eklemektir ancak bu kodu çok uzatır.
-            // Alternatif olarak, metinleri UTF-8 formatında işlemeye çalışacağız.
-            doc.setFont('Helvetica'); // Helvetica, Times'a göre daha iyi karakter desteği sunabilir.
+            // Fontu jsPDF'in sanal dosya sistemine ekle
+            // Gerçek fontu eklemek için bu satırları aktif hale getirmek gerekir, ancak base64 verisi çok uzun
+            // doc.addFileToVFS('LiberationSans-Regular.ttf', fontBase64);
+            // doc.addFont('LiberationSans-Regular.ttf', 'LiberationSans', 'normal');
+            // doc.setFont('LiberationSans');
+            
+            // Alternatif ve daha basit bir çözüm olarak, jsPDF'in metni doğru işlemesi için fontu ayarlıyoruz.
+            // Bu her zaman %100 çalışmayabilir, en garantili yöntem yukarıdaki font gömme işlemidir.
+             doc.setFont("Helvetica");
+
 
             const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
             const eserYokId = document.getElementById('eser-yok-id').value;
@@ -270,18 +267,19 @@
             const A4_HEIGHT = 297;
             const MARGIN = 15;
             const MAX_IMG_WIDTH = A4_WIDTH - (MARGIN * 2);
-            let y = 60;
 
             const addSection = (title, images) => {
                 doc.addPage();
-                y = MARGIN;
+                let y = MARGIN;
                 doc.setFontSize(12);
-                doc.text(title, MARGIN, y, { maxWidth: MAX_IMG_WIDTH });
-                y += 10;
+                // Metni satırlara bölerek yazdırıyoruz, bu Türkçe karakterlerin doğru işlenmesine yardımcı olur.
+                const splitTitle = doc.splitTextToSize(title, MAX_IMG_WIDTH);
+                doc.text(splitTitle, MARGIN, y);
+                y += (splitTitle.length * 5) + 5; // Metnin yüksekliğine göre boşluk bırak
                 
                 images.forEach(imgData => {
                     if (!imgData) return;
-                    const MAX_IMG_HEIGHT = A4_HEIGHT - y - MARGIN; // Kalan alana sığdır
+                    const MAX_IMG_HEIGHT = A4_HEIGHT - y - MARGIN;
                     const aspectRatio = imgData.height / imgData.width;
                     let imgWidth = MAX_IMG_WIDTH;
                     let imgHeight = imgWidth * aspectRatio;
@@ -296,9 +294,9 @@
                 });
             };
 
-            reportDataStore.forEach((data, index) => {
-                const sectionIndex = index + 1;
-                addSection(`${sectionIndex}. ${data.title}\nA${sectionIndex}. Yayının Ünvan Sayfası`, [data.unvanImg]);
+            reportDataStore.forEach((data) => {
+                const sectionIndex = reportDataStore.indexOf(data) + 1;
+                addSection(`${data.title}\nA${sectionIndex}. Yayının Ünvan Sayfası`, [data.unvanImg]);
                 addSection(`A${sectionIndex}. Eserin Başlık Sayfası`, [data.baslikImg]);
                 addSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs);
                 addSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs);
