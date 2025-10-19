@@ -107,13 +107,18 @@
     let reportDataStore = [];
 
     const extractTitleWithGemini = async (imageDataUrl) => {
-        const apiKey = ""; // Bu ortamda anahtar otomatik olarak sağlanır.
+        const apiKey = "AIzaSyBaQW1iOyXFvRRPb-2ivLs8qfh8q9dtopc"; 
+        
+        if (apiKey === "AIzaSyBaQW1iOyXFvRRPb-2ivLs8qfh8q9dtopc") {
+            console.error("Gemini API Anahtarı Girilmemiş!");
+            return null;
+        }
+
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
         const base64Data = imageDataUrl.split(',')[1];
         const payload = {
             "contents": [{
                 "parts": [
-                    // *** DÜZELTİLDİ: Yapay zeka talimatı daha net hale getirildi ***
                     { "text": "Bu akademik makale sayfasındaki en büyük ve en belirgin metin olan ana başlığı çıkar. Sadece ve sadece tam başlığı döndür, başka hiçbir açıklama, yazar adı veya ek metin ekleme." },
                     { "inline_data": { "mime_type": "image/jpeg", "data": base64Data } }
                 ]
@@ -123,7 +128,6 @@
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
-                // *** DÜZELTİLDİ: Daha detaylı hata loglama ***
                 const errorBody = await response.text();
                 console.error("Gemini API Error Response:", response.status, errorBody);
                 return null;
@@ -132,7 +136,6 @@
             if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
                  return data.candidates[0].content.parts[0].text.trim().replace(/\n/g, ' ');
             }
-            // *** DÜZELTİLDİ: Cevap formatı beklenmedikse loglama ***
             console.warn("Gemini'den beklenen formatta bir cevap alınamadı:", data);
             return null;
         } catch (error) {
@@ -141,7 +144,7 @@
         }
     };
     
-    const processPdfPage = async (pdfDoc, pageNum, scale = 2.2) => {
+    const processPdfPage = async (pdfDoc, pageNum, scale = 2.0) => { // Maliyet optimizasyonu için scale düşürüldü
         try {
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
@@ -244,8 +247,7 @@
                     const citUrl = URL.createObjectURL(citFile);
                     const citPdfDoc = await pdfjsLib.getDocument(citUrl).promise;
 
-                    // *** DÜZELTİLDİ: Görüntü kalitesi AI için artırıldı ***
-                    const firstPageImage = await processPdfPage(citPdfDoc, 1, 2.5);
+                    const firstPageImage = await processPdfPage(citPdfDoc, 1);
                     if (firstPageImage) {
                          feedbackText.textContent = `Atıf ${i + 1} başlığı yapay zeka ile taranıyor...`;
                          const extractedTitle = await extractTitleWithGemini(firstPageImage.dataURL);
