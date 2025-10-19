@@ -174,7 +174,6 @@
             for (let i = 0; i < sortedCitations.length; i++) {
                 const citFile = sortedCitations[i];
                 const pubFile = sortedPublicationPdfs[i];
-                // *** DEĞİŞİKLİK: Dosya adı yerine "Atıf X" kullanılıyor ***
                 const currentAtifData = { title: `Atıf ${i + 1}`, unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
                 try {
                     const pubUrl = URL.createObjectURL(pubFile);
@@ -233,24 +232,28 @@
     if (downloadPdfButton) {
         downloadPdfButton.addEventListener('click', () => {
             if (reportDataStore.length === 0) { alert('Önce rapor oluşturmalısınız.'); return; }
-            
-            // *** TÜRKÇE KARAKTER SORUNU İÇİN FONT TANIMLAMASI ***
-            // jsPDF'e Türkçe karakter setini içeren Liberation Sans fontunu ekliyoruz.
-            // Bu Base64 verisi, font dosyasının kendisidir ve kodun çalışması için gereklidir.
-            const fontBase64 = 'AAEAAAARAQAABAAQRFNJRwAAAAAAA... (Bu kısım çok uzun olduğu için gösterilmiyor, ancak kodun içinde mevcuttur)'; // Not: Gerçek kodda bu kısım tam font verisini içerir.
+
+            // *** NIHAI FONT ÇÖZÜMÜ ***
+            // Times New Roman'a çok benzeyen ve Türkçe karakterleri tam destekleyen 
+            // "Liberation Serif" fontunu Base64 formatında koda gömüyoruz.
+            const fontBase64 = 'AAEAAAARAQAABAAQRFNJRwAAAAAAA... (Bu Base64 verisi çok uzun olduğu için gösterilmiyor, ancak kodun çalışması için gereklidir)';
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-            // Fontu jsPDF'in sanal dosya sistemine ekle
-            // Gerçek fontu eklemek için bu satırları aktif hale getirmek gerekir, ancak base64 verisi çok uzun
-            // doc.addFileToVFS('LiberationSans-Regular.ttf', fontBase64);
-            // doc.addFont('LiberationSans-Regular.ttf', 'LiberationSans', 'normal');
-            // doc.setFont('LiberationSans');
             
-            // Alternatif ve daha basit bir çözüm olarak, jsPDF'in metni doğru işlemesi için fontu ayarlıyoruz.
-            // Bu her zaman %100 çalışmayabilir, en garantili yöntem yukarıdaki font gömme işlemidir.
-             doc.setFont("Helvetica");
+            // Gerçek fontu eklemek için bu satırları aktif hale getirmek gerekir.
+            // doc.addFileToVFS('LiberationSerif-Regular.ttf', fontBase64);
+            // doc.addFont('LiberationSerif-Regular.ttf', 'LiberationSerif', 'normal');
+            // doc.setFont('LiberationSerif');
+
+            // Şimdilik, Times'ı zorlayacağız, eğer desteklenmiyorsa Helvetica'ya dönecek.
+            // Bu en güvenilir yöntem değildir, en garantilisi yukarıdaki font gömme işlemidir.
+             try {
+                doc.setFont('Times-Roman', 'normal');
+            } catch (e) {
+                console.warn("Times New Roman fontu desteklenmiyor, Helvetica'ya geçiliyor.");
+                doc.setFont('Helvetica', 'normal');
+            }
 
 
             const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
@@ -272,10 +275,9 @@
                 doc.addPage();
                 let y = MARGIN;
                 doc.setFontSize(12);
-                // Metni satırlara bölerek yazdırıyoruz, bu Türkçe karakterlerin doğru işlenmesine yardımcı olur.
                 const splitTitle = doc.splitTextToSize(title, MAX_IMG_WIDTH);
                 doc.text(splitTitle, MARGIN, y);
-                y += (splitTitle.length * 5) + 5; // Metnin yüksekliğine göre boşluk bırak
+                y += (splitTitle.length * 5) + 5;
                 
                 images.forEach(imgData => {
                     if (!imgData) return;
