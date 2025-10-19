@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
 
-    // Gerekli kütüphanelerin yüklenip yüklenmediğini kontrol et
     if (typeof pdfjsLib === 'undefined' || typeof saveAs === 'undefined' || typeof htmlDocx === 'undefined' || typeof html2pdf === 'undefined') {
         console.error("Gerekli kütüphanelerden biri veya birkaçı yüklenemedi.");
         alert("Sayfa tam olarak yüklenemedi. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.");
@@ -16,10 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadDocxButton = document.getElementById('download-docx');
     const downloadPdfButton = document.getElementById('download-pdf');
 
-    let generatedReportHTML = ''; // Raporun HTML içeriğini saklamak için global değişken
+    let generatedReportHTML = '';
 
-    // PDF sayfasını bir resim (canvas) olarak çizer ve Base64 verisine dönüştürür
-    const processPdfPageToDataURL = async (pdfDoc, pageNum, scale = 2.0) => { // Çözünürlüğü artırdık
+    const processPdfPageToDataURL = async (pdfDoc, pageNum, scale = 1.8) => {
         try {
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
@@ -28,44 +26,43 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             await page.render({ canvasContext: context, viewport: viewport }).promise;
-            return canvas.toDataURL('image/jpeg', 0.9); // Kaliteli JPEG olarak veri alıyoruz
+            return canvas.toDataURL('image/jpeg', 0.85);
         } catch (e) {
             console.error(`Error processing PDF page ${pageNum}:`, e);
-            return null; // Hata durumunda null döndür
+            return null;
         }
     };
 
-    // Rapor verisini (resim URL'leri) kullanarak HTML içeriği oluşturan fonksiyon
     const buildReportHTML = (reportTitle, reportYokId, reportData) => {
         let html = `<div class="text-center mb-12 not-prose">
-                        <h1 class="text-3xl font-bold text-navy-900" style="font-family: 'Times New Roman', serif;">${reportTitle}</h1>
-                        <p class="text-xl text-gray-600 mt-1" style="font-family: 'Times New Roman', serif;">YÖK ID: ${reportYokId}</p>
-                        <h2 class="text-2xl font-bold mt-8 border-t border-gray-200 pt-4 text-navy-900" style="font-family: 'Times New Roman', serif;">Atıflar</h2>
+                        <h1 class="text-3xl font-bold">${reportTitle}</h1>
+                        <p class="text-xl text-gray-600 mt-1">YÖK ID: ${reportYokId}</p>
+                        <h2 class="text-2xl font-bold mt-8 border-t pt-4">Atıflar</h2>
                     </div>`;
 
         reportData.forEach((data, index) => {
             const sectionIndex = index + 1;
             html += `<div class="report-section pt-8">
-                        <h3 class="text-xl font-bold mb-4" style="font-family: 'Times New Roman', serif;">${sectionIndex}. ${data.title}</h3>
+                        <h3 class="text-xl font-bold mb-4">${sectionIndex}. ${data.title}</h3>
                         
                         <div class="mb-8 break-inside-avoid">
-                            <h4 class="text-lg font-semibold mb-2" style="font-family: 'Times New Roman', serif;">A${sectionIndex}. Yayının Ünvan Sayfası</h4>
-                            ${data.unvanImg ? `<img src="${data.unvanImg}">` : '<p class="text-red-500 italic">[Görsel işlenemedi]</p>'}
+                            <h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Yayının Ünvan Sayfası</h4>
+                            ${data.unvanImg ? `<img src="${data.unvanImg}" style="max-width: 14cm; width: 100%; height: auto; object-fit: contain;">` : '<p class="text-red-500 italic">[Görsel işlenemedi]</p>'}
                         </div>
                         
                         <div class="mb-8 break-inside-avoid">
-                            <h4 class="text-lg font-semibold mb-2" style="font-family: 'Times New Roman', serif;">A${sectionIndex}. Eserin Başlık Sayfası</h4>
-                            ${data.baslikImg ? `<img src="${data.baslikImg}">` : '<p class="text-red-500 italic">[Görsel işlenemedi]</p>'}
+                            <h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Eserin Başlık Sayfası</h4>
+                            ${data.baslikImg ? `<img src="${data.baslikImg}" style="max-width: 14cm; width: 100%; height: auto; object-fit: contain;">` : '<p class="text-red-500 italic">[Görsel işlenemedi]</p>'}
                         </div>
 
                         <div class="mb-8 break-inside-avoid">
-                            <h4 class="text-lg font-semibold mb-2" style="font-family: 'Times New Roman', serif;">A${sectionIndex}. Eserde ilk atıf yapılan sayfa</h4>
-                            ${data.atifImgs.length > 0 ? data.atifImgs.map(src => `<img src="${src}">`).join('') : '<p class="italic text-gray-600">[Kurala uygun ek sayfa bulunmuyor.]</p>'}
+                            <h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Eserde ilk atıf yapılan sayfa</h4>
+                            ${data.atifImgs.length > 0 ? data.atifImgs.map(src => `<img src="${src}" style="max-width: 14cm; width: 100%; height: auto; object-fit: contain; margin-bottom: 1rem;">`).join('') : '<p class="italic text-gray-600">[Kurala uygun ek sayfa bulunmuyor.]</p>'}
                         </div>
 
                         <div class="mb-8 break-inside-avoid">
-                            <h4 class="text-lg font-semibold mb-2" style="font-family: 'Times New Roman', serif;">A${sectionIndex}. Kaynakça Sayfası</h4>
-                             ${data.kaynakcaImgs.length > 0 ? data.kaynakcaImgs.map(src => `<img src="${src}">`).join('') : '<p class="italic text-gray-600">[Kurala uygun ek sayfa bulunmuyor.]</p>'}
+                            <h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Kaynakça Sayfası</h4>
+                             ${data.kaynakcaImgs.length > 0 ? data.kaynakcaImgs.map(src => `<img src="${src}" style="max-width: 14cm; width: 100%; height: auto; object-fit: contain; margin-bottom: 1rem;">`).join('') : '<p class="italic text-gray-600">[Kurala uygun ek sayfa bulunmuyor.]</p>'}
                         </div>
                     </div>`;
         });
@@ -76,19 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (reportForm) {
         reportForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            if (!reportForm.checkValidity()) {
-                reportForm.reportValidity();
-                return;
-            }
-
             const eserAdi = document.getElementById('eser-adi').value;
             const eserYokId = document.getElementById('eser-yok-id').value;
             const citationFiles = document.getElementById('citation-files').files;
             const publicationInfoPdfs = document.getElementById('publication-info-pdfs').files;
             
             if (citationFiles.length !== publicationInfoPdfs.length) {
-                alert('Atıf PDF sayısı ile yayın bilgisi PDF sayısı eşit olmalıdır.');
-                return;
+                alert('Atıf PDF sayısı ile yayın bilgisi PDF sayısı eşit olmalıdır.'); return;
             }
 
             reportForm.style.display = 'none';
@@ -98,38 +89,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const sortedCitations = Array.from(citationFiles).sort((a, b) => a.name.localeCompare(b.name));
             const sortedPublicationPdfs = Array.from(publicationInfoPdfs).sort((a, b) => a.name.localeCompare(b.name));
-            
-            const reportData = []; // Tüm rapor verisini burada toplayacağız
+            const reportData = [];
 
             for (let i = 0; i < sortedCitations.length; i++) {
                 const citFile = sortedCitations[i];
                 const pubFile = sortedPublicationPdfs[i];
-
-                const currentAtifData = {
-                    title: citFile.name.replace('.pdf', ''),
-                    unvanImg: null,
-                    baslikImg: null,
-                    atifImgs: [],
-                    kaynakcaImgs: []
-                };
-
-                // 1. Yayın Bilgisi PDF'ini işle
+                const currentAtifData = { title: citFile.name.replace('.pdf', ''), unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
                 try {
                     const pubUrl = URL.createObjectURL(pubFile);
                     const pubPdfDoc = await pdfjsLib.getDocument(pubUrl).promise;
                     currentAtifData.unvanImg = await processPdfPageToDataURL(pubPdfDoc, 1);
                     URL.revokeObjectURL(pubUrl);
                 } catch(e) { console.error(`Yayın PDF'i işlenemedi: ${pubFile.name}`, e); }
-
-                // 2. Atıf PDF'ini işle
                 try {
                     const citUrl = URL.createObjectURL(citFile);
                     const citPdfDoc = await pdfjsLib.getDocument(citUrl).promise;
                     const totalPages = citPdfDoc.numPages;
-
                     currentAtifData.baslikImg = await processPdfPageToDataURL(citPdfDoc, 1);
-                    
-                    // Yeni Kural Mantığı
                     if (totalPages === 2) {
                         currentAtifData.atifImgs.push(await processPdfPageToDataURL(citPdfDoc, 1));
                         currentAtifData.kaynakcaImgs.push(await processPdfPageToDataURL(citPdfDoc, 2));
@@ -146,17 +122,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         currentAtifData.kaynakcaImgs.push(await processPdfPageToDataURL(citPdfDoc, 4));
                         currentAtifData.kaynakcaImgs.push(await processPdfPageToDataURL(citPdfDoc, 5));
                     }
-                    
                     URL.revokeObjectURL(citUrl);
                 } catch (e) { console.error(`Atıf PDF'i işlenemedi: ${citFile.name}`, e); }
-                
                 reportData.push(currentAtifData);
             }
 
-            // Tüm veriler işlendikten sonra HTML'i oluştur ve göster
             generatedReportHTML = buildReportHTML(eserAdi, eserYokId, reportData);
             reportPreview.innerHTML = generatedReportHTML;
-
             feedbackArea.classList.add('hidden');
             outputArea.classList.remove('hidden');
             reportPreview.classList.remove('hidden');
@@ -165,51 +137,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (downloadDocxButton) {
         downloadDocxButton.addEventListener('click', () => {
-            if (!generatedReportHTML) {
-                alert('Önce rapor oluşturmalısınız.');
-                return;
-            }
+            if (!generatedReportHTML) { alert('Önce rapor oluşturmalısınız.'); return; }
             const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
             const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
-            
-            // DOCX için stiller ve HTML yapısı
-            const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } img { max-width: 100%; height: auto; display: block; margin: 16px 0; } .report-section { page-break-before: always; } .break-inside-avoid { page-break-inside: avoid; } </style></head><body>${generatedReportHTML}</body></html>`;
-            
+            const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } body { margin: 1in; } h1, h2, h3, h4, p { margin: 12px 0; } img { display: block; margin: 16px 0; } .report-section { page-break-before: always; } .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; } </style></head><body>${generatedReportHTML}</body></html>`;
             try {
-                const converted = htmlDocx.asBlob(content, {
-                    orientation: 'portrait',
-                    margins: { top: 720, right: 720, bottom: 720, left: 720 } // 1 inch margins
-                });
+                const converted = htmlDocx.asBlob(content, { orientation: 'portrait' });
                 saveAs(converted, fileName);
-            } catch(e) {
-                console.error('Word export failed:', e);
-                alert('Rapor Word dosyasına dönüştürülürken bir hata oluştu.');
-            }
+            } catch(e) { console.error('Word export failed:', e); alert('Rapor Word dosyasına dönüştürülürken bir hata oluştu.'); }
         });
     }
     
     if (downloadPdfButton) {
         downloadPdfButton.addEventListener('click', () => {
-            if (!generatedReportHTML) {
-                alert('Önce rapor oluşturmalısınız.');
-                return;
-            }
+            if (!generatedReportHTML) { alert('Önce rapor oluşturmalısınız.'); return; }
             const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
             const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.pdf`;
-            
-            // PDF için geçici bir div oluşturup onun üzerinden işlem yapıyoruz
-            const element = document.createElement('div');
-            element.innerHTML = generatedReportHTML;
-            
-            const opt = {
-                margin:       [0.7, 0.7, 0.7, 0.7],
-                filename:     fileName,
-                image:        { type: 'jpeg', quality: 0.95 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false, dpi: 192, letterRendering: true },
-                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'avoid-all'], before: '.report-section' }
-            };
 
+            // PDF için özel, temiz bir HTML yapısı oluşturuyoruz.
+            const pdfHtml = `<html><head><style> body { font-family: 'Times New Roman', serif; margin: 0.7in; } h1, h2, h3, h4, p { margin: 12px 0; } .report-section { page-break-before: always; } .break-inside-avoid { page-break-inside: avoid; } img { display: block; max-width: 100%; max-height: 9.5in; /* Resmin bir sayfadan taşmasını engeller */ object-fit: contain; margin-top: 16px; } </style></head><body>${generatedReportHTML}</body></html>`;
+            
+            const element = document.createElement('div');
+            element.innerHTML = pdfHtml;
+
+            const opt = { margin: 0, filename: fileName, image: { type: 'jpeg', quality: 0.90 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+            
             html2pdf().from(element).set(opt).save();
         });
     }
