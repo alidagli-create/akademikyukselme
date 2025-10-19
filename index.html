@@ -109,7 +109,10 @@
     const extractTitleWithGemini = async (imageDataUrl) => {
         const apiKey = "AIzaSyBaQW1iOyXFvRRPb-2ivLs8qfh8q9dtopc"; 
         
-        if (apiKey === "AIzaSyBaQW1iOyXFvRRPb-2ivLs8qfh8q9dtopc") {
+        // *** DÜZELTME BURADA ***
+        // Bu kontrol, anahtarın hala placeholder olup olmadığını kontrol eder.
+        // Kendi anahtarınızı yukarıya yapıştırdığınızda bu kontrol doğru çalışacaktır.
+        if (apiKey === "YAPAY_ZEKA_ANAHTARINIZI_BURAYA_YAPIŞTIRIN") {
             console.error("Gemini API Anahtarı Girilmemiş!");
             return null;
         }
@@ -144,7 +147,7 @@
         }
     };
     
-    const processPdfPage = async (pdfDoc, pageNum, scale = 2.0) => { // Maliyet optimizasyonu için scale düşürüldü
+    const processPdfPage = async (pdfDoc, pageNum, scale = 2.0) => {
         try {
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
