@@ -107,42 +107,23 @@
     let reportDataStore = [];
 
     const extractTitleWithGemini = async (imageDataUrl) => {
-        const apiKey = "AIzaSyBaQW1iOyXFvRRPb-2ivLs8qfh8q9dtopc"; 
-        
-        // *** DÜZELTME BURADA ***
-        // Bu kontrol, anahtarın hala placeholder olup olmadığını kontrol eder.
-        // Kendi anahtarınızı yukarıya yapıştırdığınızda bu kontrol doğru çalışacaktır.
-        if (apiKey === "YAPAY_ZEKA_ANAHTARINIZI_BURAYA_YAPIŞTIRIN") {
-            console.error("Gemini API Anahtarı Girilmemiş!");
-            return null;
-        }
-
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        // *** GÜNCELLENDİ: API çağrısı artık güvenli arka yüze yapılıyor ***
         const base64Data = imageDataUrl.split(',')[1];
-        const payload = {
-            "contents": [{
-                "parts": [
-                    { "text": "Bu akademik makale sayfasındaki en büyük ve en belirgin metin olan ana başlığı çıkar. Sadece ve sadece tam başlığı döndür, başka hiçbir açıklama, yazar adı veya ek metin ekleme." },
-                    { "inline_data": { "mime_type": "image/jpeg", "data": base64Data } }
-                ]
-            }]
-        };
-
+        
         try {
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            // Netlify'da bu URL, 'get-title.js' adlı yardımcıyı çalıştırır.
+            const response = await fetch('/.netlify/functions/get-title', { 
+                method: 'POST',
+                body: JSON.stringify({ image: base64Data })
+            });
             if (!response.ok) {
-                const errorBody = await response.text();
-                console.error("Gemini API Error Response:", response.status, errorBody);
+                console.error("Yardımcıya yapılan istek başarısız oldu:", await response.text());
                 return null;
             }
             const data = await response.json();
-            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
-                 return data.candidates[0].content.parts[0].text.trim().replace(/\n/g, ' ');
-            }
-            console.warn("Gemini'den beklenen formatta bir cevap alınamadı:", data);
-            return null;
+            return data.title;
         } catch (error) {
-            console.error("Gemini API'ye bağlanırken hata oluştu:", error);
+            console.error("Yardımcıya bağlanırken hata oluştu:", error);
             return null;
         }
     };
