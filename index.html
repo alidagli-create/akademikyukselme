@@ -115,7 +115,8 @@
             return null;
         }
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-25:generateContent?key=${apiKey}`;
+        // *** DÜZELTME: Model adı doğru formatta yazıldı ***
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
         const base64Data = imageDataUrl.split(',')[1];
         const payload = {
             "contents": [{
@@ -136,7 +137,6 @@
             const data = await response.json();
             if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
                  let title = data.candidates[0].content.parts[0].text.trim().replace(/\n/g, ' ');
-                 // *** DÜZELTME: LaTeX benzeri alt simgeleri temizle ***
                  title = title.replace(/\$_{([^}]+)}/g, '$1').replace(/\$/g, '');
                  return title;
             }
@@ -153,6 +153,7 @@
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
             const canvas = document.createElement('canvas');
+            // *** DÜZELTME: Tarayıcıya performans ipucu veriliyor ***
             const context = canvas.getContext('2d', { willReadFrequently: true });
             canvas.height = viewport.height;
             canvas.width = viewport.width;
@@ -200,7 +201,6 @@
                 return `<div class="mb-8 break-inside-avoid"><h4 class="text-lg font-semibold mb-2">${title}</h4>${content}</div>`;
             };
             
-            // *** DÜZELTME: "Detayları" kelimesi kaldırıldı ***
             html += `<div style="page-break-before: always;">
                         <h3 style="font-size:${isForWord ? '14pt' : '1.25rem'}; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
                         ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
