@@ -113,7 +113,8 @@
         const payload = {
             "contents": [{
                 "parts": [
-                    { "text": "Bu akademik makalenin başlığını çıkar. Sadece ve sadece tam başlığı döndür, başka hiçbir açıklama veya metin ekleme." },
+                    // *** DÜZELTİLDİ: Yapay zeka talimatı daha net hale getirildi ***
+                    { "text": "Bu akademik makale sayfasındaki en büyük ve en belirgin metin olan ana başlığı çıkar. Sadece ve sadece tam başlığı döndür, başka hiçbir açıklama, yazar adı veya ek metin ekleme." },
                     { "inline_data": { "mime_type": "image/jpeg", "data": base64Data } }
                 ]
             }]
@@ -122,16 +123,20 @@
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
-                console.error("Gemini API Error Response:", await response.text());
+                // *** DÜZELTİLDİ: Daha detaylı hata loglama ***
+                const errorBody = await response.text();
+                console.error("Gemini API Error Response:", response.status, errorBody);
                 return null;
             }
             const data = await response.json();
-            if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
                  return data.candidates[0].content.parts[0].text.trim().replace(/\n/g, ' ');
             }
+            // *** DÜZELTİLDİ: Cevap formatı beklenmedikse loglama ***
+            console.warn("Gemini'den beklenen formatta bir cevap alınamadı:", data);
             return null;
         } catch (error) {
-            console.error("Error calling Gemini API:", error);
+            console.error("Gemini API'ye bağlanırken hata oluştu:", error);
             return null;
         }
     };
@@ -214,7 +219,6 @@
             reportPreview.classList.add('hidden');
             feedbackArea.classList.remove('hidden');
             
-            // *** DÜZELTİLDİ: Akıllı sıralama (Natural Sort) ***
             const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
             const sortedCitations = Array.from(citationFiles).sort(naturalSort);
             const sortedPublicationPdfs = Array.from(publicationInfoPdfs).sort(naturalSort);
@@ -225,7 +229,6 @@
                 feedbackText.textContent = `Atıf ${i + 1} / ${sortedCitations.length} işleniyor...`;
                 const citFile = sortedCitations[i];
                 const pubFile = sortedPublicationPdfs[i];
-                // *** DÜZELTİLDİ: Başlangıç başlığı ***
                 let title = `[Başlık Tespit Ediliyor...]`;
                 
                 const currentAtifData = { title: title, unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
@@ -241,16 +244,15 @@
                     const citUrl = URL.createObjectURL(citFile);
                     const citPdfDoc = await pdfjsLib.getDocument(citUrl).promise;
 
-                    const firstPageImage = await processPdfPage(citPdfDoc, 1, 1.5);
+                    // *** DÜZELTİLDİ: Görüntü kalitesi AI için artırıldı ***
+                    const firstPageImage = await processPdfPage(citPdfDoc, 1, 2.5);
                     if (firstPageImage) {
                          feedbackText.textContent = `Atıf ${i + 1} başlığı yapay zeka ile taranıyor...`;
                          const extractedTitle = await extractTitleWithGemini(firstPageImage.dataURL);
                          if (extractedTitle) {
                             currentAtifData.title = extractedTitle;
                          } else {
-                            // *** DÜZELTİLDİ: AI başarısız olursa net mesaj ***
                             currentAtifData.title = `[Yapay Zeka Başlığı Alınamadı - Dosya: ${citFile.name}]`;
-                            console.warn(`Yapay zeka başlık çıkaramadı, dosya adı kullanılıyor: ${citFile.name}`);
                          }
                     }
 
