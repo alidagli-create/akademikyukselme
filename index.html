@@ -153,7 +153,8 @@
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
             const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d', { willReadFrequently: true }); // Performans uyarısı için
+            // *** DÜZELTME BURADA: Tarayıcıya performans ipucu veriliyor ***
+            const context = canvas.getContext('2d', { willReadFrequently: true });
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             await page.render({ canvasContext: context, viewport: viewport }).promise;
