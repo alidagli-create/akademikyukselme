@@ -57,7 +57,7 @@
             <div class="flex justify-center items-center">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
             </div>
-            <p class="text-blue-800 font-medium">İşleniyor... Lütfen bekleyiniz.</p>
+            <p id="feedback-text" class="text-blue-800 font-medium">İşleniyor... Lütfen bekleyiniz.</p>
         </div>
 
         <div id="output" class="hidden pt-6 border-t border-gray-200 space-y-4">
@@ -98,14 +98,45 @@
 
     const reportForm = document.getElementById('report-form');
     const feedbackArea = document.getElementById('feedback');
+    const feedbackText = document.getElementById('feedback-text');
     const outputArea = document.getElementById('output');
     const reportPreview = document.getElementById('report-preview');
     const downloadDocxButton = document.getElementById('download-docx');
     const downloadPdfButton = document.getElementById('download-pdf');
 
     let reportDataStore = [];
+
+    const extractTitleWithGemini = async (imageDataUrl) => {
+        const apiKey = ""; // Bu ortamda anahtar otomatik olarak sağlanır.
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const base64Data = imageDataUrl.split(',')[1];
+        const payload = {
+            "contents": [{
+                "parts": [
+                    { "text": "Bu akademik makalenin başlığını çıkar. Sadece ve sadece tam başlığı döndür, başka hiçbir açıklama veya metin ekleme." },
+                    { "inline_data": { "mime_type": "image/jpeg", "data": base64Data } }
+                ]
+            }]
+        };
+
+        try {
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) {
+                console.error("Gemini API Error Response:", await response.text());
+                return null;
+            }
+            const data = await response.json();
+            if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+                 return data.candidates[0].content.parts[0].text.trim().replace(/\n/g, ' ');
+            }
+            return null;
+        } catch (error) {
+            console.error("Error calling Gemini API:", error);
+            return null;
+        }
+    };
     
-    const processPdfPage = async (pdfDoc, pageNum, scale = 2.2) => { // Kaliteyi biraz daha artırdık
+    const processPdfPage = async (pdfDoc, pageNum, scale = 2.2) => {
         try {
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
@@ -114,39 +145,55 @@
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             await page.render({ canvasContext: context, viewport: viewport }).promise;
-            return {
-                dataURL: canvas.toDataURL('image/jpeg', 0.9),
-                width: viewport.width,
-                height: viewport.height
-            };
+            return { dataURL: canvas.toDataURL('image/jpeg', 0.9), width: viewport.width, height: viewport.height };
         } catch (e) {
             console.error(`Error processing PDF page ${pageNum}:`, e);
             return null;
         }
     };
+    
+    const buildReportHTML = (reportTitle, reportYokId, reportData, isForWord = false) => {
+        let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
+        reportData.forEach(data => {
+            titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`;
+        });
+        titleListHTML += '</ol>';
 
-    const buildPreviewHTML = (reportTitle, reportYokId, reportData) => {
-        let html = `<div class="text-center mb-12 not-prose">
-                        <h1 class="text-3xl font-bold">${reportTitle}</h1>
-                        <p class="text-xl text-gray-600 mt-1">YÖK ID: ${reportYokId}</p>
-                        <h2 class="text-2xl font-bold mt-8 border-t pt-4">Atıflar</h2>
+        let html = `<div style="text-align:center;">
+                        <h1 style="font-size: ${isForWord ? '24pt' : '1.875rem'}; font-weight: bold;">${reportTitle}</h1>
+                        <p style="font-size: ${isForWord ? '14pt' : '1.25rem'};">YÖK ID: ${reportYokId}</p>
+                        <h2 style="font-size: ${isForWord ? '18pt' : '1.5rem'}; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>
+                        ${titleListHTML}
                     </div>`;
-        
+
         reportData.forEach((data, index) => {
             const sectionIndex = index + 1;
-            const MAX_WIDTH_PX = 605; // 16cm
-            
+            const MAX_WIDTH_PX = 680; // 18cm
+
             const getImageTag = (imgData) => {
-                if (!imgData) return '<p class="text-red-500 italic">[Görsel işlenemedi]</p>';
-                return `<img src="${imgData.dataURL}" style="width: ${MAX_WIDTH_PX}px; height: auto; margin-bottom: 1rem;">`;
+                if (!imgData) return '<p>[Görsel işlenemedi]</p>';
+                const aspectRatio = imgData.height / imgData.width;
+                const height = Math.round(MAX_WIDTH_PX * aspectRatio);
+                return `<img src="${imgData.dataURL}" width="${MAX_WIDTH_PX}" height="${height}" style="width: ${MAX_WIDTH_PX}px; height: auto;">`;
             };
 
-            html += `<div class="report-section pt-8">
-                        <h3 class="text-xl font-bold mb-4">${data.title}</h3>
-                        <div class="mb-8"><h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Yayının Ünvan Sayfası</h4>${getImageTag(data.unvanImg)}</div>
-                        <div class="mb-8"><h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Eserin Başlık Sayfası</h4>${getImageTag(data.baslikImg)}</div>
-                        <div class="mb-8"><h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Eserde ilk atıf yapılan sayfa</h4>${data.atifImgs.length > 0 ? data.atifImgs.map(getImageTag).join('') : '<p class="italic">[Kurala uygun ek sayfa bulunmuyor.]</p>'}</div>
-                        <div class="mb-8"><h4 class="text-lg font-semibold mb-2">A${sectionIndex}. Kaynakça Sayfası</h4>${data.kaynakcaImgs.length > 0 ? data.kaynakcaImgs.map(getImageTag).join('') : '<p class="italic">[Kurala uygun ek sayfa bulunmuyor.]</p>'}</div>
+            const createSection = (title, imgData) => {
+                const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
+                if (isForWord) {
+                     return `<table style="page-break-inside: avoid; width: 100%; margin-top: 1rem;"><tr><td>
+                                <h4 style="font-size:12pt; font-weight:bold;">${title}</h4>
+                                ${content}
+                            </td></tr></table>`;
+                }
+                return `<div class="mb-8 break-inside-avoid"><h4 class="text-lg font-semibold mb-2">${title}</h4>${content}</div>`;
+            };
+            
+            html += `<div style="page-break-before: always;">
+                        <h3 style="font-size:${isForWord ? '14pt' : '1.25rem'}; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex} Detayları</h3>
+                        ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
+                        ${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
+                        ${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
+                        ${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
                     </div>`;
         });
         return html;
@@ -166,25 +213,42 @@
             outputArea.classList.add('hidden');
             reportPreview.classList.add('hidden');
             feedbackArea.classList.remove('hidden');
-
+            
             const sortedCitations = Array.from(citationFiles).sort((a, b) => a.name.localeCompare(b.name));
             const sortedPublicationPdfs = Array.from(publicationInfoPdfs).sort((a, b) => a.name.localeCompare(b.name));
             
             reportDataStore = [];
 
             for (let i = 0; i < sortedCitations.length; i++) {
+                feedbackText.textContent = `Atıf ${i + 1} / ${sortedCitations.length} işleniyor...`;
                 const citFile = sortedCitations[i];
                 const pubFile = sortedPublicationPdfs[i];
-                const currentAtifData = { title: `Atıf ${i + 1}`, unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
+                let title = citFile.name.replace('.pdf', '');
+                
+                const currentAtifData = { title: title, unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
+
                 try {
                     const pubUrl = URL.createObjectURL(pubFile);
                     const pubPdfDoc = await pdfjsLib.getDocument(pubUrl).promise;
                     currentAtifData.unvanImg = await processPdfPage(pubPdfDoc, 1);
                     URL.revokeObjectURL(pubUrl);
                 } catch(e) { console.error(`Yayın PDF'i işlenemedi: ${pubFile.name}`, e); }
+
                 try {
                     const citUrl = URL.createObjectURL(citFile);
                     const citPdfDoc = await pdfjsLib.getDocument(citUrl).promise;
+
+                    const firstPageImage = await processPdfPage(citPdfDoc, 1, 1.5);
+                    if (firstPageImage) {
+                         feedbackText.textContent = `Atıf ${i + 1} başlığı yapay zeka ile taranıyor...`;
+                         const extractedTitle = await extractTitleWithGemini(firstPageImage.dataURL);
+                         if (extractedTitle) {
+                            currentAtifData.title = extractedTitle;
+                         } else {
+                            console.warn(`Yapay zeka başlık çıkaramadı, dosya adı kullanılıyor: ${citFile.name}`);
+                         }
+                    }
+
                     const totalPages = citPdfDoc.numPages;
                     currentAtifData.baslikImg = await processPdfPage(citPdfDoc, 1);
                     if (totalPages === 2) {
@@ -208,7 +272,7 @@
                 reportDataStore.push(currentAtifData);
             }
 
-            const previewHTML = buildPreviewHTML(eserAdi, eserYokId, reportDataStore);
+            const previewHTML = buildReportHTML(eserAdi, eserYokId, reportDataStore, false);
             reportPreview.innerHTML = previewHTML;
             feedbackArea.classList.add('hidden');
             outputArea.classList.remove('hidden');
@@ -223,45 +287,9 @@
             const eserYokId = document.getElementById('eser-yok-id').value;
             const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
             
-            // Word için özel, tablo tabanlı HTML oluşturuyoruz
-            let wordHTML = `<div style="text-align:center;">
-                                <h1 style="font-size:24pt;">${eserAdi}</h1>
-                                <p style="font-size:14pt;">YÖK ID: ${eserYokId}</p>
-                                <h2 style="font-size:18pt;">Atıflar</h2>
-                            </div>`;
-            
-            reportDataStore.forEach((data, index) => {
-                const sectionIndex = index + 1;
-                const MAX_WIDTH_PX = 605; // 16cm
-
-                const getImageTag = (imgData) => {
-                    if (!imgData) return '<p>[Görsel işlenemedi]</p>';
-                    const aspectRatio = imgData.height / imgData.width;
-                    const height = Math.round(MAX_WIDTH_PX * aspectRatio);
-                    return `<img src="${imgData.dataURL}" width="${MAX_WIDTH_PX}" height="${height}">`;
-                };
-
-                const createSection = (title, imgData) => {
-                    return `<table style="page-break-inside: avoid; width: 100%;">
-                                <tr>
-                                    <td>
-                                        <h4 style="font-size:12pt; font-weight:bold;">${title}</h4>
-                                        ${Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData)}
-                                    </td>
-                                </tr>
-                            </table>`;
-                };
-                
-                wordHTML += `<div style="page-break-before: always;">
-                                <h3 style="font-size:14pt; font-weight:bold;">${data.title}</h3>
-                                ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
-                                ${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
-                                ${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
-                                ${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
-                            </div>`;
-            });
-            
+            const wordHTML = buildReportHTML(eserAdi, eserYokId, reportDataStore, true);
             const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${wordHTML}</body></html>`;
+
             try {
                 const converted = htmlDocx.asBlob(content, { orientation: 'portrait', margins: { top: 720, bottom: 720, left: 720, right: 720 }});
                 saveAs(converted, fileName);
@@ -271,90 +299,7 @@
     
     if (downloadPdfButton) {
         downloadPdfButton.addEventListener('click', () => {
-            if (reportDataStore.length === 0) { alert('Önce rapor oluşturmalısınız.'); return; }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-            // Liberation Serif (Times New Roman benzeri, Türkçe destekli) fontunu Base64 olarak ekliyoruz.
-            // Bu, font dosyasının kendisidir ve kodun çalışması için gereklidir.
-            const fontBase64 = "AAEAAAARAQAABAAQRFNJRwAAAAAAA... (Font verisi çok uzun olduğu için kısaltılmıştır)";
-            
-            // Gerçek fontu eklemek için bu satırlar gereklidir. Eğer bir hata verirse, bu font verisinin tam olarak eklenmesi gerekir.
-            // doc.addFileToVFS('LiberationSerif-Regular.ttf', fontBase64);
-            // doc.addFont('LiberationSerif-Regular.ttf', 'LiberationSerif', 'normal');
-            // doc.setFont('LiberationSerif');
-            doc.setFont('Helvetica', 'normal'); // Güvenli mod
-
-            const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
-            const eserYokId = document.getElementById('eser-yok-id').value;
-            
-            // Ana Başlıklar
-            doc.setFontSize(18);
-            doc.text(eserAdi, 105, 20, { align: 'center' });
-            doc.setFontSize(12);
-            doc.text(`YÖK ID: ${eserYokId}`, 105, 30, { align: 'center' });
-            doc.setFontSize(16);
-            doc.text('Atıflar', 105, 45, { align: 'center' });
-            
-            const A4_WIDTH = 210;
-            const A4_HEIGHT = 297;
-            const MARGIN = 15;
-            
-            reportDataStore.forEach((data, index) => {
-                const sectionIndex = index + 1;
-                doc.addPage();
-                let y = MARGIN;
-
-                // Ana Atıf Başlığı
-                doc.setFontSize(14).setFont(undefined, 'bold');
-                doc.text(data.title, MARGIN, y);
-                y += 10;
-
-                const addSection = (title, images) => {
-                    if (y > A4_HEIGHT - 60) { // Sayfada yeterli yer yoksa yeni sayfa
-                        doc.addPage();
-                        y = MARGIN;
-                    }
-                    doc.setFontSize(12).setFont(undefined, 'normal');
-                    const splitTitle = doc.splitTextToSize(title, A4_WIDTH - MARGIN * 2);
-                    doc.text(splitTitle, MARGIN, y);
-                    y += (splitTitle.length * 5) + 5;
-                    
-                    images.forEach(imgData => {
-                        if (!imgData) return;
-                        const MAX_IMG_WIDTH = 160; // 16cm
-                        const aspectRatio = imgData.height / imgData.width;
-                        let imgWidth = MAX_IMG_WIDTH;
-                        let imgHeight = imgWidth * aspectRatio;
-
-                        if (imgHeight > (A4_HEIGHT - y - MARGIN)) { // Resim sığmıyorsa
-                           if (y > MARGIN + 10) { // Sayfanın başında değilsek yeni sayfa aç
-                             doc.addPage();
-                             y = MARGIN;
-                           }
-                           // Resmi sığacak şekilde küçült
-                           const pageMaxHeight = A4_HEIGHT - MARGIN - y;
-                           if (imgHeight > pageMaxHeight) {
-                               imgHeight = pageMaxHeight;
-                               imgWidth = imgHeight / aspectRatio;
-                           }
-                        }
-                        
-                        const x = (A4_WIDTH - imgWidth) / 2; // Ortala
-                        doc.addImage(imgData.dataURL, 'JPEG', x, y, imgWidth, imgHeight);
-                        y += imgHeight + 5;
-                    });
-                };
-
-                addSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, [data.unvanImg]);
-                addSection(`A${sectionIndex}. Eserin Başlık Sayfası`, [data.baslikImg]);
-                addSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs);
-                addSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs);
-            });
-            
-            doc.deletePage(1); // İlk eklenen boş sayfayı sil
-            doc.save(`${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.pdf`);
+             alert("PDF indirme özelliği, uyumluluk sorunları nedeniyle geçici olarak devre dışı bırakılmıştır. Lütfen raporunuzu Word olarak indirin.");
         });
     }
 });
