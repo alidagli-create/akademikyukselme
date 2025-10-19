@@ -214,8 +214,10 @@
             reportPreview.classList.add('hidden');
             feedbackArea.classList.remove('hidden');
             
-            const sortedCitations = Array.from(citationFiles).sort((a, b) => a.name.localeCompare(b.name));
-            const sortedPublicationPdfs = Array.from(publicationInfoPdfs).sort((a, b) => a.name.localeCompare(b.name));
+            // *** DÜZELTİLDİ: Akıllı sıralama (Natural Sort) ***
+            const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+            const sortedCitations = Array.from(citationFiles).sort(naturalSort);
+            const sortedPublicationPdfs = Array.from(publicationInfoPdfs).sort(naturalSort);
             
             reportDataStore = [];
 
@@ -223,7 +225,8 @@
                 feedbackText.textContent = `Atıf ${i + 1} / ${sortedCitations.length} işleniyor...`;
                 const citFile = sortedCitations[i];
                 const pubFile = sortedPublicationPdfs[i];
-                let title = citFile.name.replace('.pdf', '');
+                // *** DÜZELTİLDİ: Başlangıç başlığı ***
+                let title = `[Başlık Tespit Ediliyor...]`;
                 
                 const currentAtifData = { title: title, unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
 
@@ -245,6 +248,8 @@
                          if (extractedTitle) {
                             currentAtifData.title = extractedTitle;
                          } else {
+                            // *** DÜZELTİLDİ: AI başarısız olursa net mesaj ***
+                            currentAtifData.title = `[Yapay Zeka Başlığı Alınamadı - Dosya: ${citFile.name}]`;
                             console.warn(`Yapay zeka başlık çıkaramadı, dosya adı kullanılıyor: ${citFile.name}`);
                          }
                     }
