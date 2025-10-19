@@ -74,10 +74,14 @@
 
     </main>
 
+    <!-- Gerekli Kütüphaneler -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="script.js" type="module"></script>
+    <!-- html2pdf.js kaldırıldı, yerine daha kararlı olan jsPDF doğrudan kullanılacak -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Ana JavaScript dosyamız -->
+    <script src="script.js" defer></script>
 </body>
 </html>
