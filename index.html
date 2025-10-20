@@ -4,49 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Akademik Atıf Raporu Oluşturucu</title>
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <style>
-        /* Temel stiller */
-        body { font-family: 'Inter', sans-serif; }
-        #report-preview { font-family: 'Times New Roman', Times, serif; }
-        .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen py-8">
+<body class="bg-gray-100 flex items-center justify-center min-h-screen py-12">
 
-    <main class="w-full max-w-2xl mx-auto p-8 md:p-12 bg-white rounded-xl shadow-lg space-y-8">
+    <main class="w-full max-w-2xl mx-auto p-8 bg-white rounded-2xl shadow-xl space-y-8">
         <header class="text-center">
-            <h1 class="text-3xl font-bold text-blue-900">Akademik Atıf Raporu Oluşturucu</h1>
+            <h1 class="text-3xl font-bold text-gray-800">Akademik Atıf Raporu Oluşturucu</h1>
         </header>
 
         <form id="report-form" class="space-y-6">
             <fieldset class="space-y-4">
-                <legend class="text-xl font-semibold text-blue-800 border-b border-gray-200 pb-2 mb-4 w-full">Ana Makale Bilgileri</legend>
+                <legend class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4 w-full">Ana Makale Bilgileri</legend>
                 <div>
-                    <label for="eser-adi" class="block text-sm font-medium text-gray-700 mb-1">Eser Adı</label>
+                    <label for="eser-adi" class="block text-sm font-medium text-gray-600 mb-1">Eser Adı</label>
                     <input type="text" id="eser-adi" name="eser-adi" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition" required>
                 </div>
                 <div>
-                    <label for="eser-yok-id" class="block text-sm font-medium text-gray-700 mb-1">Eser Yök ID</label>
+                    <label for="eser-yok-id" class="block text-sm font-medium text-gray-600 mb-1">Eser Yök ID</label>
                     <input type="text" id="eser-yok-id" name="eser-yok-id" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition" required>
                 </div>
             </fieldset>
 
             <fieldset class="space-y-4">
-                <legend class="text-xl font-semibold text-blue-800 border-b border-gray-200 pb-2 mb-4 w-full">Dosya Yükleme</legend>
+                <legend class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4 w-full">Dosya Yükleme</legend>
                 <div>
-                    <label for="citation-files" class="block text-sm font-medium text-gray-700 mb-1">Atıf PDF Dosyaları</label>
+                    <label for="citation-files" class="block text-sm font-medium text-gray-600 mb-1">Atıf PDF Dosyaları</label>
                     <input type="file" id="citation-files" name="citation-files" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" multiple accept=".pdf" required>
                 </div>
                 <div>
-                    <label for="publication-info-pdfs" class="block text-sm font-medium text-gray-700 mb-1">Yayın Bilgisi PDF Dosyaları</label>
+                    <label for="publication-info-pdfs" class="block text-sm font-medium text-gray-600 mb-1">Yayın Bilgisi PDF Dosyaları</label>
                     <input type="file" id="publication-info-pdfs" name="publication-info-pdfs" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" multiple accept=".pdf" required>
                 </div>
             </fieldset>
 
             <div class="pt-4">
-                <button type="submit" id="generate-button" class="w-full flex items-center justify-center gap-2 bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
+                <button type="submit" id="generate-button" class="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
                     <i data-lucide="file-cog"></i>
                     <span>Rapor Oluştur</span>
                 </button>
@@ -55,267 +49,68 @@
 
         <div id="feedback" class="hidden text-center py-4 space-y-3">
             <div class="flex justify-center items-center">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
-            <p id="feedback-text" class="text-blue-800 font-medium">İşleniyor... Lütfen bekleyiniz.</p>
+            <p id="feedback-text" class="text-gray-700 font-medium">Rapor oluşturuluyor... Bu işlem dosya sayısına göre birkaç dakika sürebilir. Lütfen bekleyiniz.</p>
         </div>
-
-        <div id="output" class="hidden pt-6 border-t border-gray-200 space-y-4">
-             <h2 class="text-xl font-semibold text-blue-800 text-center">Rapor Başarıyla Oluşturuldu</h2>
-             <p class="text-center text-gray-600">Aşağıdaki butonları kullanarak raporunuzu indirebilirsiniz.</p>
-            <div class="flex flex-col sm:flex-row gap-4">
-                 <button id="download-docx" class="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
-                    <i data-lucide="file-text"></i>
-                    <span>Raporu Word Olarak İndir (.docx)</span>
-                </button>
-                <button id="download-pdf" class="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300">
-                    <i data-lucide="file-down"></i>
-                    <span>Raporu PDF Olarak İndir (.pdf)</span>
-                </button>
-            </div>
-        </div>
-
-        <div id="report-preview" class="hidden prose max-w-none prose-headings:text-blue-900 mt-8"></div>
+         <div id="error-area" class="hidden text-center py-4 px-4 bg-red-50 text-red-700 rounded-lg"></div>
 
     </main>
 
-    <!-- Gerekli Kütüphaneler -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
-    <!-- Ana JavaScript Kodları -->
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-    lucide.createIcons();
+        lucide.createIcons();
 
-    if (typeof pdfjsLib === 'undefined' || typeof saveAs === 'undefined' || typeof htmlDocx === 'undefined' || typeof jspdf === 'undefined') {
-        alert("Gerekli kütüphaneler yüklenemedi. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.");
-        return;
-    }
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        const reportForm = document.getElementById('report-form');
+        const generateButton = document.getElementById('generate-button');
+        const feedbackArea = document.getElementById('feedback');
+        const errorArea = document.getElementById('error-area');
 
-    const reportForm = document.getElementById('report-form');
-    const feedbackArea = document.getElementById('feedback');
-    const feedbackText = document.getElementById('feedback-text');
-    const outputArea = document.getElementById('output');
-    const reportPreview = document.getElementById('report-preview');
-    const downloadDocxButton = document.getElementById('download-docx');
-    const downloadPdfButton = document.getElementById('download-pdf');
-
-    let reportDataStore = [];
-
-    const extractTitleWithGemini = async (imageDataUrl) => {
-        const apiKey = "AIzaSyBaQW1iOyXFvRRPb-2ivLs8qfh8q9dtopc"; 
-        
-        if (apiKey === "YAPAY_ZEKA_ANAHTARINIZI_BURAYA_YAPIŞTIRIN" || !apiKey) {
-            console.error("Gemini API Anahtarı Girilmemiş veya Geçersiz!");
-            alert("Uygulamanın çalışması için geçerli bir Gemini API anahtarı girilmelidir.");
-            return null;
-        }
-
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-        const base64Data = imageDataUrl.split(',')[1];
-        const payload = {
-            "contents": [{
-                "parts": [
-                    { "text": "Bu akademik makale sayfasındaki en büyük ve en belirgin metin olan ana başlığı çıkar. Sadece ve sadece tam başlığı döndür, başka hiçbir açıklama, yazar adı veya ek metin ekleme." },
-                    { "inline_data": { "mime_type": "image/jpeg", "data": base64Data } }
-                ]
-            }]
-        };
-
-        try {
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) {
-                const errorBody = await response.text();
-                console.error("Gemini API Error Response:", response.status, errorBody);
-                return null;
-            }
-            const data = await response.json();
-            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
-                 let title = data.candidates[0].content.parts[0].text.trim().replace(/\n/g, ' ');
-                 title = title.replace(/\$_{([^}]+)}/g, '$1').replace(/\$/g, '');
-                 return title;
-            }
-            console.warn("Gemini'den beklenen formatta bir cevap alınamadı:", data);
-            return null;
-        } catch (error) {
-            console.error("Gemini API'ye bağlanırken hata oluştu:", error);
-            return null;
-        }
-    };
-    
-    const processPdfPage = async (pdfDoc, pageNum, scale = 2.0) => {
-        try {
-            const page = await pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale });
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d', { willReadFrequently: true });
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            return { dataURL: canvas.toDataURL('image/jpeg', 0.9), width: viewport.width, height: viewport.height };
-        } catch (e) {
-            console.error(`Error processing PDF page ${pageNum}:`, e);
-            return null;
-        }
-    };
-    
-    const buildReportHTML = (reportTitle, reportYokId, reportData, isForWord = false) => {
-        let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
-        reportData.forEach(data => {
-            titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`;
-        });
-        titleListHTML += '</ol>';
-
-        let html = `<div style="text-align:center;">
-                        <h1 style="font-size: ${isForWord ? '24pt' : '1.875rem'}; font-weight: bold;">${reportTitle}</h1>
-                        <p style="font-size: ${isForWord ? '14pt' : '1.25rem'};">YÖK ID: ${reportYokId}</p>
-                        <h2 style="font-size: ${isForWord ? '18pt' : '1.5rem'}; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>
-                        ${titleListHTML}
-                    </div>`;
-
-        reportData.forEach((data, index) => {
-            const sectionIndex = index + 1;
-            // *** DEĞİŞİKLİK: Resim boyutu 16cm olarak güncellendi ***
-            const MAX_WIDTH_PX = 605; // 16cm
-
-            const getImageTag = (imgData) => {
-                if (!imgData) return '<p>[Görsel işlenemedi]</p>';
-                const aspectRatio = imgData.height / imgData.width;
-                const height = Math.round(MAX_WIDTH_PX * aspectRatio);
-                return `<img src="${imgData.dataURL}" width="${MAX_WIDTH_PX}" height="${height}" style="width: ${MAX_WIDTH_PX}px; height: auto;">`;
-            };
-
-            const createSection = (title, imgData) => {
-                const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
-                if (isForWord) {
-                     return `<table style="page-break-inside: avoid; width: 100%; margin-top: 1rem;"><tr><td>
-                                <h4 style="font-size:12pt; font-weight:bold;">${title}</h4>
-                                ${content}
-                            </td></tr></table>`;
-                }
-                return `<div class="mb-8 break-inside-avoid"><h4 class="text-lg font-semibold mb-2">${title}</h4>${content}</div>`;
-            };
-            
-            html += `<div style="page-break-before: always;">
-                        <h3 style="font-size:${isForWord ? '14pt' : '1.25rem'}; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
-                        ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
-                        ${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
-                        ${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
-                        ${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
-                    </div>`;
-        });
-        return html;
-    };
-
-    if (reportForm) {
         reportForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const eserAdi = document.getElementById('eser-adi').value;
-            const eserYokId = document.getElementById('eser-yok-id').value;
-            const citationFiles = document.getElementById('citation-files').files;
-            const publicationInfoPdfs = document.getElementById('publication-info-pdfs').files;
             
-            if (citationFiles.length !== publicationInfoPdfs.length) { alert('Atıf PDF sayısı ile yayın bilgisi PDF sayısı eşit olmalıdır.'); return; }
-
-            reportForm.style.display = 'none';
-            outputArea.classList.add('hidden');
-            reportPreview.classList.add('hidden');
+            generateButton.disabled = true;
+            generateButton.querySelector('span').textContent = 'Oluşturuluyor...';
             feedbackArea.classList.remove('hidden');
+            errorArea.classList.add('hidden');
+
+            const formData = new FormData(reportForm);
             
-            const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-            const sortedCitations = Array.from(citationFiles).sort(naturalSort);
-            const sortedPublicationPdfs = Array.from(publicationInfoPdfs).sort(naturalSort);
-            
-            reportDataStore = [];
-
-            for (let i = 0; i < sortedCitations.length; i++) {
-                feedbackText.textContent = `Atıf ${i + 1} / ${sortedCitations.length} işleniyor...`;
-                const citFile = sortedCitations[i];
-                const pubFile = sortedPublicationPdfs[i];
-                let title = `[Başlık Tespit Ediliyor...]`;
-                
-                const currentAtifData = { title: title, unvanImg: null, baslikImg: null, atifImgs: [], kaynakcaImgs: [] };
-
-                try {
-                    const pubUrl = URL.createObjectURL(pubFile);
-                    const pubPdfDoc = await pdfjsLib.getDocument(pubUrl).promise;
-                    currentAtifData.unvanImg = await processPdfPage(pubPdfDoc, 1);
-                    URL.revokeObjectURL(pubUrl);
-                } catch(e) { console.error(`Yayın PDF'i işlenemedi: ${pubFile.name}`, e); }
-
-                try {
-                    const citUrl = URL.createObjectURL(citFile);
-                    const citPdfDoc = await pdfjsLib.getDocument(citUrl).promise;
-
-                    const firstPageImage = await processPdfPage(citPdfDoc, 1);
-                    if (firstPageImage) {
-                         feedbackText.textContent = `Atıf ${i + 1} başlığı yapay zeka ile taranıyor...`;
-                         const extractedTitle = await extractTitleWithGemini(firstPageImage.dataURL);
-                         if (extractedTitle) {
-                            currentAtifData.title = extractedTitle;
-                         } else {
-                            currentAtifData.title = `[Yapay Zeka Başlığı Alınamadı - Dosya: ${citFile.name}]`;
-                         }
-                    }
-
-                    const totalPages = citPdfDoc.numPages;
-                    currentAtifData.baslikImg = await processPdfPage(citPdfDoc, 1);
-                    if (totalPages === 2) {
-                        currentAtifData.atifImgs.push(await processPdfPage(citPdfDoc, 1));
-                        currentAtifData.kaynakcaImgs.push(await processPdfPage(citPdfDoc, 2));
-                    } else if (totalPages === 3) {
-                        currentAtifData.atifImgs.push(await processPdfPage(citPdfDoc, 2));
-                        currentAtifData.kaynakcaImgs.push(await processPdfPage(citPdfDoc, 3));
-                    } else if (totalPages === 4) {
-                        currentAtifData.atifImgs.push(await processPdfPage(citPdfDoc, 2));
-                        currentAtifData.atifImgs.push(await processPdfPage(citPdfDoc, 3));
-                        currentAtifData.kaynakcaImgs.push(await processPdfPage(citPdfDoc, 4));
-                    } else if (totalPages >= 5) {
-                        currentAtifData.atifImgs.push(await processPdfPage(citPdfDoc, 2));
-                        currentAtifData.atifImgs.push(await processPdfPage(citPdfDoc, 3));
-                        currentAtifData.kaynakcaImgs.push(await processPdfPage(citPdfDoc, 4));
-                        currentAtifData.kaynakcaImgs.push(await processPdfPage(citPdfDoc, 5));
-                    }
-                    URL.revokeObjectURL(citUrl);
-                } catch (e) { console.error(`Atıf PDF'i işlenemedi: ${citFile.name}`, e); }
-                reportDataStore.push(currentAtifData);
-            }
-
-            const previewHTML = buildReportHTML(eserAdi, eserYokId, reportDataStore, false);
-            reportPreview.innerHTML = previewHTML;
-            feedbackArea.classList.add('hidden');
-            outputArea.classList.remove('hidden');
-            reportPreview.classList.remove('hidden');
-        });
-    }
-
-    if (downloadDocxButton) {
-        downloadDocxButton.addEventListener('click', () => {
-            if (reportDataStore.length === 0) { alert('Önce rapor oluşturmalısınız.'); return; }
-            const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
-            const eserYokId = document.getElementById('eser-yok-id').value;
-            const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
-            
-            const wordHTML = buildReportHTML(eserAdi, eserYokId, reportDataStore, true);
-            const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${wordHTML}</body></html>`;
-
             try {
-                const converted = htmlDocx.asBlob(content, { orientation: 'portrait', margins: { top: 720, bottom: 720, left: 720, right: 720 }});
-                saveAs(converted, fileName);
-            } catch(e) { console.error('Word export failed:', e); alert('Rapor Word dosyasına dönüştürülürken bir hata oluştu.'); }
+                // Sunucudaki yardımcı fonksiyona dosyaları gönderiyoruz
+                const response = await fetch('/.netlify/functions/generate-report', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Sunucuda bir hata oluştu.');
+                }
+                
+                // Sunucudan gelen Word dosyasını alıyoruz
+                const blob = await response.blob();
+                const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
+                const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
+                
+                // Dosyayı kullanıcıya indiriyoruz
+                saveAs(blob, fileName);
+
+                feedbackArea.classList.add('hidden');
+                alert('Rapor başarıyla oluşturuldu ve indirildi!');
+
+            } catch (error) {
+                console.error('Rapor oluşturma hatası:', error);
+                errorArea.textContent = `Hata: ${error.message}`;
+                errorArea.classList.remove('hidden');
+                feedbackArea.classList.add('hidden');
+            } finally {
+                generateButton.disabled = false;
+                generateButton.querySelector('span').textContent = 'Rapor Oluştur';
+            }
         });
-    }
-    
-    if (downloadPdfButton) {
-        downloadPdfButton.addEventListener('click', () => {
-             alert("PDF indirme özelliği, uyumluluk sorunları nedeniyle geçici olarak devre dışı bırakılmıştır. Lütfen raporunuzu Word olarak indirin.");
-        });
-    }
-});
+    });
     </script>
 </body>
 </html>
