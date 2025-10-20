@@ -164,24 +164,21 @@
                 const getImageTag = (imgData) => {
                     if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
                     
-                    // *** DÜZELTME: En-boy oranını koruyan boyutlandırma mantığı ***
                     const MAX_WIDTH_CM = 16;
                     const TARGET_HEIGHT_CM = 16;
                     const CM_TO_PX = 37.795;
 
-                    const originalWidth = imgData.width;
-                    const originalHeight = imgData.height;
-                    const aspectRatio = originalWidth / originalHeight;
-
-                    let finalWidthPx = (TARGET_HEIGHT_CM * CM_TO_PX) * aspectRatio;
-                    let finalHeightPx = TARGET_HEIGHT_CM * CM_TO_PX;
-
-                    if (finalWidthPx > (MAX_WIDTH_CM * CM_TO_PX)) {
-                        finalWidthPx = MAX_WIDTH_CM * CM_TO_PX;
-                        finalHeightPx = finalWidthPx / aspectRatio;
-                    }
+                    const aspectRatio = imgData.width / imgData.height;
                     
-                    return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${Math.round(finalWidthPx)}" height="${Math.round(finalHeightPx)}">`;
+                    const calculatedWidthCmAtTargetHeight = TARGET_HEIGHT_CM * aspectRatio;
+
+                    if (calculatedWidthCmAtTargetHeight <= MAX_WIDTH_CM) {
+                        const heightPx = Math.round(TARGET_HEIGHT_CM * CM_TO_PX);
+                        return `<img src="data:image/jpeg;base64,${imgData.base64}" height="${heightPx}">`;
+                    } else {
+                        const widthPx = Math.round(MAX_WIDTH_CM * CM_TO_PX);
+                        return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${widthPx}">`;
+                    }
                 };
 
                 const createSection = (title, imgData) => {
