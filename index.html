@@ -145,7 +145,6 @@
         
         const getTitleFromAI = async (base64Image, apiKey) => {
              try {
-                // *** İSTEĞİNİZ ÜZERİNE MODEL ADI GÜNCELLENDİ ***
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-latest:generateContent?key=${apiKey}`;
                 
                 const payload = {
@@ -237,8 +236,11 @@
                     const citFile = citationFiles[i];
                     const pubFile = publicationInfoPdfs[i];
                     feedbackText.textContent = `Atıf ${i + 1}/${citationFiles.length} işleniyor...`;
-                    const citFileBuffer = await citFile.arraybuffer();
-                    const pubFileBuffer = await pubFile.arraybuffer();
+
+                    // *** YAZIM HATASI DÜZELTMESİ BURADA ***
+                    const citFileBuffer = await citFile.arrayBuffer(); // B harfi büyük
+                    const pubFileBuffer = await pubFile.arrayBuffer(); // B harfi büyük
+                    
                     const citPdfDoc = await pdfjsLib.getDocument(new Uint8Array(citFileBuffer)).promise;
                     const pubPdfDoc = await pdfjsLib.getDocument(new Uint8Array(pubFileBuffer)).promise;
                     const firstPageImageForAI = await processPdfPage(citPdfDoc, 1, 1.5);
