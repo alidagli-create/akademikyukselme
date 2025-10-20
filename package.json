@@ -1,0 +1,11 @@
+{
+  "name": "akademik-rapor-sunucu",
+  "version": "1.0.0",
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "docx": "^8.5.0",
+    "pdfjs-dist": "2.16.105",
+    "canvas": "^2.11.2",
+    "@google/generative-ai": "^0.2.1"
+  }
+}
