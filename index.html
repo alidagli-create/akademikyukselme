@@ -183,40 +183,55 @@
                 return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" height="${targetHeightPixels}" style="width:${TARGET_WIDTH_PIXELS}px; height:${targetHeightPixels}px;">`;
             };
 
-            const createSectionHTML = (title, imgData) => {
-                const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
-                return `<div style="page-break-inside: avoid; margin-top: 1rem;">
-                            <h4 style="font-size:12pt; font-weight:bold;">${title}</h4>
-                            ${content}
-                        </div>`;
+            // *** SAYFA DÜZENİ SORUNUNU ÇÖZMEK İÇİN YENİ YAPI ***
+            // Bu fonksiyon başlığı ve resmi, ayrılmaması için bir tablo içine koyar.
+            const createSectionAsTable = (title, imgData) => {
+                const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('<br>') : getImageTag(imgData);
+                // page-break-inside: avoid komutu tablonun bölünmesini engeller
+                return `<table style="width: 100%; page-break-inside: avoid;">
+                            <tr>
+                                <td>
+                                    <h4 style="font-size:12pt; font-weight:bold; margin-top: 1rem; margin-bottom: 0.5rem;">${title}</h4>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    ${content}
+                                </td>
+                            </tr>
+                        </table>`;
             };
 
             if (isFirstPart) {
                 let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
                 fullData.forEach(data => { titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`; });
                 titleListHTML += '</ol>';
-                html += `<div style="text-align:center;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
+                // İlk ana başlık sayfası. Kendisinden sonra yeni sayfa açar.
+                html += `<div style="text-align:center; page-break-after: always;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
             }
 
             batchData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
                 
-                // Her "Atıf" bloğu için yeni bir sayfa aç (eğer ilk değilse)
+                // Her "Atıf" bloğu için yeni bir sayfa aç (eğer rapordaki ilk Atıf değilse)
                 const pageBreakForAtif = (isFirstPart && index === 0) ? '' : 'page-break-before: always;';
 
+                // BÖLÜMLERİN OLUŞTURULDUĞU YER
+                // 1. Atıf ana başlığı ve ilk bölüm (Ünvan Sayfası) AYNI SAYFADA
+                // 2. Diğer bölümlerin her biri KENDİ YENİ SAYFASINDA
                 html += `
                     <div style="${pageBreakForAtif}">
                         <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
-                        ${createSectionHTML(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
+                        ${createSectionAsTable(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
                     </div>
                     <div style="page-break-before: always;">
-                        ${createSectionHTML(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
+                        ${createSectionAsTable(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
                     </div>
                     <div style="page-break-before: always;">
-                        ${createSectionHTML(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
+                        ${createSectionAsTable(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
                     </div>
                     <div style="page-break-before: always;">
-                        ${createSectionHTML(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
+                        ${createSectionAsTable(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
                     </div>
                 `;
             });
