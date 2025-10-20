@@ -139,8 +139,6 @@
             if (citationFiles.length !== publicationInfoPdfs.length) {
                 alert('Atıf PDF sayısı ile yayın bilgisi PDF sayısı eşit olmalıdır.');
                 generateButton.disabled = false;
-                generateButton.querySelector('span').textContent = 'Rapor Oluştur';
-                feedbackArea.classList.add('hidden');
                 return;
             }
 
@@ -162,10 +160,9 @@
                         method: 'POST',
                         body: titleFormData,
                     });
-
                     if (!titleResponse.ok) {
-                         const errorText = await titleResponse.text();
-                         throw new Error(`Başlık alınırken hata oluştu (${citFile.name}): ${errorText}`);
+                         const errorData = await titleResponse.json();
+                         throw new Error(`Başlık alınırken hata oluştu (${citFile.name}): ${errorData.error}`);
                     }
                     const { title } = await titleResponse.json();
 
@@ -179,14 +176,13 @@
                         method: 'POST',
                         body: pdfFormData,
                     });
-
                     if (!pdfResponse.ok) {
-                        const errorText = await pdfResponse.text();
-                        throw new Error(`PDF işlenirken hata oluştu (${citFile.name}): ${errorText}`);
+                        const errorData = await pdfResponse.json();
+                        throw new Error(`PDF işlenirken hata oluştu (${citFile.name}): ${errorData.error}`);
                     }
                     const pdfData = await pdfResponse.json();
 
-                    finalReportData.push({ title: title || `[Başlık Alınamadı] - ${citFile.name}`, ...pdfData });
+                    finalReportData.push({ title: title || `[Başlık Alınamadı] - ${citFile.name.replace('.pdf','')}`, ...pdfData });
                 }
                 
                 feedbackArea.classList.add('hidden');
