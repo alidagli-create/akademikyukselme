@@ -145,7 +145,8 @@
         
         const getTitleFromAI = async (base64Image, apiKey) => {
              try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-latest:generateContent?key=${apiKey}`;
+                // *** İSTEĞİNİZ ÜZERİNE MODEL ADI GÜNCELLENDİ ***
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
                 
                 const payload = {
                     "contents": [{
@@ -190,12 +191,22 @@
                     return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" height="${targetHeightPixels}" style="width:${TARGET_WIDTH_PIXELS}px; height:${targetHeightPixels}px;">`;
                 };
 
-                const createSection = (title, imgData) => {
+                // *** YENİ SAYFA DÜZENİ İÇİN GÜNCELLENDİ ***
+                const createSection = (title, imgData, needsPageBreak) => {
+                    const pageBreakStyle = needsPageBreak ? 'page-break-before: always;' : '';
                     const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
-                    return `<table style="page-break-inside: avoid; width: 100%; margin-top: 1rem;"><tr><td><h4 style="font-size:12pt; font-weight:bold;">${title}</h4>${content}</td></tr></table>`;
+                    return `<table style="${pageBreakStyle} page-break-inside: avoid; width: 100%; margin-top: 1rem;"><tr><td><h4 style="font-size:12pt; font-weight:bold;">${title}</h4>${content}</td></tr></table>`;
                 };
-                const pageBreakStyle = (isFirstPart && index === 0) ? '' : 'page-break-before: always;';
-                html += `<div style="${pageBreakStyle}"><h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}</div>`;
+                
+                const pageBreakStyleForMainDiv = (isFirstPart && index === 0) ? '' : 'page-break-before: always;';
+                
+                html += `<div style="${pageBreakStyleForMainDiv}">
+                            <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
+                            ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg, false)}
+                            ${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg, true)}
+                            ${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs, true)}
+                            ${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs, true)}
+                         </div>`;
             });
             return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${html}</body></html>`;
         };
@@ -236,10 +247,9 @@
                     const citFile = citationFiles[i];
                     const pubFile = publicationInfoPdfs[i];
                     feedbackText.textContent = `Atıf ${i + 1}/${citationFiles.length} işleniyor...`;
-
-                    // *** YAZIM HATASI DÜZELTMESİ BURADA ***
-                    const citFileBuffer = await citFile.arrayBuffer(); // B harfi büyük
-                    const pubFileBuffer = await pubFile.arrayBuffer(); // B harfi büyük
+                    
+                    const citFileBuffer = await citFile.arrayBuffer();
+                    const pubFileBuffer = await pubFile.arrayBuffer();
                     
                     const citPdfDoc = await pdfjsLib.getDocument(new Uint8Array(citFileBuffer)).promise;
                     const pubPdfDoc = await pdfjsLib.getDocument(new Uint8Array(pubFileBuffer)).promise;
