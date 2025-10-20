@@ -164,21 +164,28 @@
                 const getImageTag = (imgData) => {
                     if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
                     
-                    const MAX_WIDTH_CM = 16;
-                    const TARGET_HEIGHT_CM = 16;
-                    const CM_TO_PX = 37.795;
-
-                    const aspectRatio = imgData.width / imgData.height;
+                    // *** DÜZELTME: En-boy oranını koruyan boyutlandırma mantığı ***
+                    const MAX_WIDTH_INCHES = 6.3; // Yaklaşık 16cm
+                    const TARGET_HEIGHT_INCHES = 6.3; // Yaklaşık 16cm
                     
-                    const calculatedWidthCmAtTargetHeight = TARGET_HEIGHT_CM * aspectRatio;
+                    const aspectRatio = imgData.width / imgData.height;
 
-                    if (calculatedWidthCmAtTargetHeight <= MAX_WIDTH_CM) {
-                        const heightPx = Math.round(TARGET_HEIGHT_CM * CM_TO_PX);
-                        return `<img src="data:image/jpeg;base64,${imgData.base64}" height="${heightPx}">`;
+                    let finalWidthInches, finalHeightInches;
+
+                    // Yüksekliği hedefe ayarladığımızda genişlik ne olur?
+                    const calculatedWidthAtTargetHeight = TARGET_HEIGHT_INCHES * aspectRatio;
+
+                    if (calculatedWidthAtTargetHeight <= MAX_WIDTH_INCHES) {
+                        // Genişlik sayfaya sığıyor, yüksekliği hedef olarak ayarla
+                        finalHeightInches = TARGET_HEIGHT_INCHES;
+                        finalWidthInches = calculatedWidthAtTargetHeight;
                     } else {
-                        const widthPx = Math.round(MAX_WIDTH_CM * CM_TO_PX);
-                        return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${widthPx}">`;
+                        // Genişlik taşıyor, genişliği maksimuma ayarla ve yüksekliği hesapla
+                        finalWidthInches = MAX_WIDTH_INCHES;
+                        finalHeightInches = finalWidthInches / aspectRatio;
                     }
+                    
+                    return `<img src="data:image/jpeg;base64,${imgData.base64}" style="width:${finalWidthInches}in; height:${finalHeightInches}in;">`;
                 };
 
                 const createSection = (title, imgData) => {
