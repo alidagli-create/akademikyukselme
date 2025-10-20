@@ -11,36 +11,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* Modern Font ve Arka Plan Gradyanı */
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            overflow-x: hidden; /* Animasyon sırasında yatay kaydırmayı engelle */
-        }
-        /* Yükleme animasyonu için özel stil */
-        .loader {
-            border-top-color: #3498db;
-            -webkit-animation: spin 1s linear infinite;
-            animation: spin 1s linear infinite;
-        }
-        @-webkit-keyframes spin {
-            0% { -webkit-transform: rotate(0deg); }
-            100% { -webkit-transform: rotate(360deg); }
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        /* Giriş animasyonu için */
-        .fade-in-up {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-        }
-        .fade-in-up.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); overflow-x: hidden; }
+        .loader { border-top-color: #3498db; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in-up { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+        .fade-in-up.visible { opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen py-12 px-4">
@@ -98,9 +73,7 @@
         </form>
 
         <div id="feedback" class="hidden text-center py-4 space-y-3">
-            <div class="flex justify-center items-center">
-                <div class="loader rounded-full h-10 w-10 border-4 border-white/20"></div>
-            </div>
+            <div class="flex justify-center items-center"><div class="loader rounded-full h-10 w-10 border-4 border-white/20"></div></div>
             <p id="feedback-text" class="text-white/80 font-medium">Rapor verileri hazırlanıyor...</p>
         </div>
          <div id="error-area" class="hidden text-center py-4 px-4 bg-red-500/80 text-white rounded-lg"></div>
@@ -119,47 +92,28 @@
         lucide.createIcons();
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // --- Sayfa Yükleme Animasyonu ---
-        setTimeout(() => {
-            document.getElementById('main-card').classList.add('visible');
-        }, 100);
+        setTimeout(() => { document.getElementById('main-card').classList.add('visible'); }, 100);
 
-        // --- Gelişmiş Dosya Yükleme Fonksiyonu ---
         const setupDropzone = (dropzoneId, inputId, fileListId) => {
             const dropzone = document.getElementById(dropzoneId);
             const fileInput = document.getElementById(inputId);
             const fileList = document.getElementById(fileListId);
-
             dropzone.addEventListener('click', () => fileInput.click());
-            dropzone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropzone.classList.add('border-purple-400', 'bg-white/10');
-            });
-            dropzone.addEventListener('dragleave', () => {
-                dropzone.classList.remove('border-purple-400', 'bg-white/10');
-            });
+            dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-purple-400', 'bg-white/10'); });
+            dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('border-purple-400', 'bg-white/10'); });
             dropzone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropzone.classList.remove('border-purple-400', 'bg-white/10');
                 fileInput.files = e.dataTransfer.files;
                 updateFileList(fileInput, fileList);
             });
-            fileInput.addEventListener('change', () => {
-                updateFileList(fileInput, fileList);
-            });
+            fileInput.addEventListener('change', () => { updateFileList(fileInput, fileList); });
         };
-
         const updateFileList = (input, listElement) => {
-            if (input.files.length > 0) {
-                listElement.textContent = `${input.files.length} dosya seçildi.`;
-            } else {
-                listElement.textContent = '';
-            }
+            listElement.textContent = input.files.length > 0 ? `${input.files.length} dosya seçildi.` : '';
         };
-
         setupDropzone('citation-dropzone', 'citation-files', 'citation-file-list');
         setupDropzone('publication-dropzone', 'publication-info-pdfs', 'publication-file-list');
-
 
         const reportForm = document.getElementById('report-form');
         const generateButton = document.getElementById('generate-button');
@@ -169,10 +123,8 @@
         const errorArea = document.getElementById('error-area');
         const outputArea = document.getElementById('output');
         const downloadButtonsContainer = document.getElementById('download-buttons-container');
-
         let allReportData = [];
 
-        // PDF işleme ve diğer fonksiyonlar
         const processPdfPage = async (pdfDoc, pageNum, scale = 1.8) => {
             try {
                 if (pageNum > pdfDoc.numPages) return null;
@@ -188,15 +140,14 @@
                     width: viewport.width,
                     height: viewport.height
                 };
-            } catch (e) {
-                console.error(`Error processing PDF page ${pageNum}:`, e);
-                return null;
-            }
+            } catch (e) { console.error(`Error processing PDF page ${pageNum}:`, e); return null; }
         };
         
         const getTitleFromAI = async (base64Image, apiKey) => {
              try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                // *** İSTEĞİNİZ ÜZERİNE MODEL ADI GÜNCELLENDİ ***
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-latest:generateContent?key=${apiKey}`;
+                
                 const payload = {
                     "contents": [{
                         "parts": [
@@ -218,62 +169,40 @@
                 let title = candidates[0].content.parts[0].text;
                 title = title.replace(/\$_{([^}]+)}/g, '$1').replace(/\$/g, '').replace(/\n/g, ' ');
                 return title;
-             } catch (error) {
-                console.error("getTitleFromAI Hatası:", error);
-                return null;
-             }
+             } catch (error) { console.error("getTitleFromAI Hatası:", error); return null; }
         };
 
         const buildWordHTML = (reportTitle, reportYokId, batchData, fullData, isFirstPart) => {
             let html = '';
             if (isFirstPart) {
                 let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
-                fullData.forEach(data => {
-                    titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`;
-                });
+                fullData.forEach(data => { titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`; });
                 titleListHTML += '</ol>';
-                html += `<div style="text-align:center;">
-                            <h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1>
-                            <p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p>
-                            <h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>
-                            ${titleListHTML}
-                        </div>`;
+                html += `<div style="text-align:center;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
             }
             batchData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
                 
-                // GÖRSEL BOYUTLANDIRMA DÜZELTMESİ
                 const getImageTag = (imgData) => {
                     if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
-                    
-                    const TARGET_WIDTH_PIXELS = 653; // 6.8 inç'e karşılık gelen yaklaşık piksel
-                    
-                    // Hem style hem de width attribute olarak eklemek en garantili yöntemdir.
-                    return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" style="width:${TARGET_WIDTH_PIXELS}px; height:auto;">`;
+                    const TARGET_WIDTH_PIXELS = 653;
+                    const aspectRatio = imgData.height / imgData.width;
+                    const targetHeightPixels = Math.round(TARGET_WIDTH_PIXELS * aspectRatio);
+                    return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" height="${targetHeightPixels}" style="width:${TARGET_WIDTH_PIXELS}px; height:${targetHeightPixels}px;">`;
                 };
 
                 const createSection = (title, imgData) => {
                     const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
-                    return `<table style="page-break-inside: avoid; width: 100%; margin-top: 1rem;"><tr><td>
-                                <h4 style="font-size:12pt; font-weight:bold;">${title}</h4>
-                                ${content}
-                            </td></tr></table>`;
+                    return `<table style="page-break-inside: avoid; width: 100%; margin-top: 1rem;"><tr><td><h4 style="font-size:12pt; font-weight:bold;">${title}</h4>${content}</td></tr></table>`;
                 };
                 const pageBreakStyle = (isFirstPart && index === 0) ? '' : 'page-break-before: always;';
-                html += `<div style="${pageBreakStyle}">
-                            <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
-                            ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
-                            ${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
-                            ${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
-                            ${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
-                        </div>`;
+                html += `<div style="${pageBreakStyle}"><h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}</div>`;
             });
             return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${html}</body></html>`;
         };
 
         reportForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            
             generateButton.disabled = true;
             buttonText.textContent = 'Oluşturuluyor...';
             feedbackArea.classList.remove('hidden');
@@ -308,8 +237,8 @@
                     const citFile = citationFiles[i];
                     const pubFile = publicationInfoPdfs[i];
                     feedbackText.textContent = `Atıf ${i + 1}/${citationFiles.length} işleniyor...`;
-                    const citFileBuffer = await citFile.arrayBuffer();
-                    const pubFileBuffer = await pubFile.arrayBuffer();
+                    const citFileBuffer = await citFile.arraybuffer();
+                    const pubFileBuffer = await pubFile.arraybuffer();
                     const citPdfDoc = await pdfjsLib.getDocument(new Uint8Array(citFileBuffer)).promise;
                     const pubPdfDoc = await pdfjsLib.getDocument(new Uint8Array(pubFileBuffer)).promise;
                     const firstPageImageForAI = await processPdfPage(citPdfDoc, 1, 1.5);
@@ -329,9 +258,7 @@
                         atifImgs.push(await processPdfPage(citPdfDoc, 2));
                         atifImgs.push(await processPdfPage(citPdfDoc, 3));
                         kaynakcaImgs.push(await processPdfPage(citPdfDoc, 4));
-                        if (totalPages >= 5) {
-                            kaynakcaImgs.push(await processPdfPage(citPdfDoc, 5));
-                        }
+                        if (totalPages >= 5) { kaynakcaImgs.push(await processPdfPage(citPdfDoc, 5)); }
                     }
                     allReportData.push({ title, unvanImg, baslikImg, atifImgs, kaynakcaImgs, originalIndex: i });
                 }
@@ -345,11 +272,9 @@
                     const startNum = i + 1;
                     const endNum = i + batchData.length;
                     const isFirstBatch = (i === 0);
-
                     const button = document.createElement('button');
                     button.className = "inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-300";
                     button.innerHTML = `<i data-lucide="file-text"></i> <span>Rapor (${startNum}-${endNum}) İndir</span>`;
-                    
                     button.addEventListener('click', () => {
                         const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
                         const eserYokId = document.getElementById('eser-yok-id').value;
@@ -363,7 +288,6 @@
                     downloadButtonsContainer.appendChild(button);
                     lucide.createIcons();
                 }
-
             } catch (error) {
                 console.error('Rapor oluşturma hatası:', error);
                 errorArea.textContent = `Hata: ${error.message}`;
