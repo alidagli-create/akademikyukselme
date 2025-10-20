@@ -99,7 +99,11 @@
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
                 await page.render({ canvasContext: context, viewport: viewport }).promise;
-                return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+                return {
+                    base64: canvas.toDataURL('image/jpeg', 0.85).split(',')[1],
+                    width: viewport.width,
+                    height: viewport.height
+                };
             } catch (e) {
                 console.error(`Error processing PDF page ${pageNum}:`, e);
                 return null;
@@ -152,11 +156,13 @@
 
             reportData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
-                const MAX_WIDTH_PX = 605;
+                const MAX_WIDTH_PX = 605; // 16cm
 
-                const getImageTag = (base64) => {
-                    if (!base64) return '<p>[Görsel işlenemedi]</p>';
-                    return `<img src="data:image/jpeg;base64,${base64}" width="${MAX_WIDTH_PX}" style="width: ${MAX_WIDTH_PX}px; height: auto;">`;
+                const getImageTag = (imgData) => {
+                    if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
+                    const aspectRatio = imgData.height / imgData.width;
+                    const height = Math.round(MAX_WIDTH_PX * aspectRatio);
+                    return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${MAX_WIDTH_PX}" height="${height}">`;
                 };
 
                 const createSection = (title, imgData) => {
@@ -224,7 +230,7 @@
                     const pubPdfDoc = await pdfjsLib.getDocument(new Uint8Array(pubFileBuffer)).promise;
 
                     const firstPageImageForAI = await processPdfPage(citPdfDoc, 1, 1.5);
-                    const title = await getTitleFromAI(firstPageImageForAI, apiKey) || `[Başlık Alınamadı] - ${citFile.name.replace('.pdf','')}`;
+                    const title = await getTitleFromAI(firstPageImageForAI.base64, apiKey) || `[Başlık Alınamadı] - ${citFile.name.replace('.pdf','')}`;
                     
                     const unvanImg = await processPdfPage(pubPdfDoc, 1);
                     const baslikImg = await processPdfPage(citPdfDoc, 1);
@@ -294,3 +300,4 @@
     </script>
 </body>
 </html>
+
