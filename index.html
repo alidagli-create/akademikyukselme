@@ -189,7 +189,8 @@
                 return `${mainTitleHtml}${subTitleHtml}${imageHtml}`;
             };
 
-            if (isFirstBatch) {
+            // *** YAZIM HATASI DÜZELTİLDİ ***
+            if (isFirstPart) {
                 let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
                 fullData.forEach(data => { titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`; });
                 titleListHTML += '</ol>';
@@ -206,7 +207,6 @@
                 pages.push(createContentBlock(null, `A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs));
             });
             
-            // Sayfaları, aralarına manuel sayfa sonu ekleyerek birleştir
             const pageBreak = `<br style="page-break-before:always">`;
             const finalHtml = pages.join(pageBreak);
 
