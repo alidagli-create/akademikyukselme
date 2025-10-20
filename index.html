@@ -112,7 +112,7 @@
         
         const getTitleFromAI = async (base64Image, apiKey) => {
              try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
                 const payload = {
                     "contents": [{
                         "parts": [
@@ -161,32 +161,16 @@
             batchData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
                 
+                // --- DEĞİŞTİRİLEN BÖLÜM BURASI ---
                 const getImageTag = (imgData) => {
                     if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
                     
-                    // *** DÜZELTME: En-boy oranını koruyan boyutlandırma mantığı ***
-                    const MAX_WIDTH_INCHES = 6.3; // Yaklaşık 16cm
-                    const TARGET_HEIGHT_INCHES = 6.3; // Yaklaşık 16cm
+                    // Genişliği 6.8 inç olarak ayarla, yükseklik otomatik olarak orantıyı koruyacaktır.
+                    const TARGET_WIDTH_INCHES = 6.8;
                     
-                    const aspectRatio = imgData.width / imgData.height;
-
-                    let finalWidthInches, finalHeightInches;
-
-                    // Yüksekliği hedefe ayarladığımızda genişlik ne olur?
-                    const calculatedWidthAtTargetHeight = TARGET_HEIGHT_INCHES * aspectRatio;
-
-                    if (calculatedWidthAtTargetHeight <= MAX_WIDTH_INCHES) {
-                        // Genişlik sayfaya sığıyor, yüksekliği hedef olarak ayarla
-                        finalHeightInches = TARGET_HEIGHT_INCHES;
-                        finalWidthInches = calculatedWidthAtTargetHeight;
-                    } else {
-                        // Genişlik taşıyor, genişliği maksimuma ayarla ve yüksekliği hesapla
-                        finalWidthInches = MAX_WIDTH_INCHES;
-                        finalHeightInches = finalWidthInches / aspectRatio;
-                    }
-                    
-                    return `<img src="data:image/jpeg;base64,${imgData.base64}" style="width:${finalWidthInches}in; height:${finalHeightInches}in;">`;
+                    return `<img src="data:image/jpeg;base64,${imgData.base64}" style="width:${TARGET_WIDTH_INCHES}in; height:auto;">`;
                 };
+                // --- DEĞİŞİKLİĞİN SONU ---
 
                 const createSection = (title, imgData) => {
                     const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
@@ -326,4 +310,3 @@
     </script>
 </body>
 </html>
-
