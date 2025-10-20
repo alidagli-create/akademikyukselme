@@ -164,9 +164,13 @@
                     if (!response.ok) {
                         let errorMsg = `Sunucu ${i+1}. dosyada hata verdi. (Status: ${response.status})`;
                         try {
+                            // Sunucudan JSON formatında bir hata mesajı gelmiş olabilir.
                             const errorData = await response.json();
                             errorMsg = errorData.error || errorMsg;
-                        } catch(e) { /* Ignore if response is not json */ }
+                        } catch(e) { 
+                            // Gelen cevap JSON değilse (örneğin Netlify 404 sayfası), genel bir hata ver.
+                            errorMsg = `Sunucuya ulaşılamıyor veya sunucu 'process-single-file' yardımcısını bulamadı. (Status: ${response.status})`;
+                        }
                         throw new Error(errorMsg);
                     }
 
