@@ -172,7 +172,7 @@
 
         let allReportData = [];
 
-        // PDF işleme ve diğer fonksiyonlar (değişiklik yok)
+        // PDF işleme ve diğer fonksiyonlar
         const processPdfPage = async (pdfDoc, pageNum, scale = 1.8) => {
             try {
                 if (pageNum > pdfDoc.numPages) return null;
@@ -241,11 +241,17 @@
             }
             batchData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
+                
+                // GÖRSEL BOYUTLANDIRMA DÜZELTMESİ
                 const getImageTag = (imgData) => {
                     if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
-                    const TARGET_WIDTH_INCHES = 6.8;
-                    return `<img src="data:image/jpeg;base64,${imgData.base64}" style="width:${TARGET_WIDTH_INCHES}in; height:auto;">`;
+                    
+                    const TARGET_WIDTH_PIXELS = 653; // 6.8 inç'e karşılık gelen yaklaşık piksel
+                    
+                    // Hem style hem de width attribute olarak eklemek en garantili yöntemdir.
+                    return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" style="width:${TARGET_WIDTH_PIXELS}px; height:auto;">`;
                 };
+
                 const createSection = (title, imgData) => {
                     const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
                     return `<table style="page-break-inside: avoid; width: 100%; margin-top: 1rem;"><tr><td>
