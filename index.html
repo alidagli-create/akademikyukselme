@@ -173,42 +173,52 @@
 
         const buildWordHTML = (reportTitle, reportYokId, batchData, fullData, isFirstPart) => {
             let html = '';
+
+            const getImageTag = (imgData) => {
+                if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
+                // *** GÖRSEL BOYUTU DAHA DA BÜYÜTÜLDÜ ***
+                const TARGET_WIDTH_PIXELS = 900;
+                const aspectRatio = imgData.height / imgData.width;
+                const targetHeightPixels = Math.round(TARGET_WIDTH_PIXELS * aspectRatio);
+                return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" height="${targetHeightPixels}" style="width:${TARGET_WIDTH_PIXELS}px; height:${targetHeightPixels}px;">`;
+            };
+
+            const createSectionHTML = (title, imgData) => {
+                const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
+                return `<div style="page-break-inside: avoid; margin-top: 1rem;">
+                            <h4 style="font-size:12pt; font-weight:bold;">${title}</h4>
+                            ${content}
+                        </div>`;
+            };
+
             if (isFirstPart) {
                 let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
                 fullData.forEach(data => { titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`; });
                 titleListHTML += '</ol>';
-                html += `<div style="text-align:center; page-break-after: always;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
+                html += `<div style="text-align:center;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
             }
+
             batchData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
                 
-                const getImageTag = (imgData) => {
-                    if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
-                    // *** GÖRSEL BOYUTU BÜYÜTÜLDÜ ***
-                    const TARGET_WIDTH_PIXELS = 750;
-                    const aspectRatio = imgData.height / imgData.width;
-                    const targetHeightPixels = Math.round(TARGET_WIDTH_PIXELS * aspectRatio);
-                    return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" height="${targetHeightPixels}" style="width:${TARGET_WIDTH_PIXELS}px; height:${targetHeightPixels}px;">`;
-                };
+                // Her "Atıf" bloğu için yeni bir sayfa aç (eğer ilk değilse)
+                const pageBreakForAtif = (isFirstPart && index === 0) ? '' : 'page-break-before: always;';
 
-                const createSection = (title, imgData, isLastSection = false) => {
-                    // Son bölümden sonra sayfa sonu eklenmemesi için kontrol
-                    const pageBreakStyle = isLastSection ? '' : 'page-break-after: always;';
-                    const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
-                    return `<div style="${pageBreakStyle} page-break-inside: avoid;">
-                                <h4 style="font-size:12pt; font-weight:bold;">${title}</h4>
-                                ${content}
-                            </div>`;
-                };
-                
-                // Ana "Atıf X" başlığı, kendisinden sonra sayfa sonu eklemez, ilk bölümle aynı sayfada yer alır.
-                html += `<div style="page-break-before: always;">
-                            <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem; margin-bottom: 1rem;">Atıf ${sectionIndex}</h3>
-                            ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
-                            ${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
-                            ${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
-                            ${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs, true)}
-                         </div>`;
+                html += `
+                    <div style="${pageBreakForAtif}">
+                        <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
+                        ${createSectionHTML(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
+                    </div>
+                    <div style="page-break-before: always;">
+                        ${createSectionHTML(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
+                    </div>
+                    <div style="page-break-before: always;">
+                        ${createSectionHTML(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
+                    </div>
+                    <div style="page-break-before: always;">
+                        ${createSectionHTML(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
+                    </div>
+                `;
             });
             return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${html}</body></html>`;
         };
