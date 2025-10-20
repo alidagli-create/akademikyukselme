@@ -16,6 +16,15 @@
 
         <form id="report-form" class="space-y-6">
             <fieldset class="space-y-4">
+                <legend class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4 w-full">API Anahtarı</legend>
+                <div>
+                    <label for="api-key" class="block text-sm font-medium text-gray-600 mb-1">Google AI API Anahtarı</label>
+                    <input type="password" id="api-key" name="api-key" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Başlık tespiti için API anahtarınızı buraya yapıştırın" required>
+                    <p class="text-xs text-gray-500 mt-1">API anahtarınız tarayıcınızda saklanır ve kimseyle paylaşılmaz.</p>
+                </div>
+            </fieldset>
+
+            <fieldset class="space-y-4">
                 <legend class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4 w-full">Ana Makale Bilgileri</legend>
                 <div>
                     <label for="eser-adi" class="block text-sm font-medium text-gray-600 mb-1">Eser Adı</label>
@@ -42,7 +51,7 @@
             <div class="pt-4">
                 <button type="submit" id="generate-button" class="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
                     <i data-lucide="file-cog"></i>
-                    <span>Rapor Oluştur</span>
+                    <span>Raporları Oluştur</span>
                 </button>
             </div>
         </form>
@@ -51,16 +60,13 @@
             <div class="flex justify-center items-center">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
-            <p id="feedback-text" class="text-gray-700 font-medium">Rapor oluşturuluyor...</p>
+            <p id="feedback-text" class="text-gray-700 font-medium">Rapor verileri hazırlanıyor...</p>
         </div>
          <div id="error-area" class="hidden text-center py-4 px-4 bg-red-50 text-red-700 rounded-lg"></div>
          <div id="output" class="hidden text-center pt-6 border-t">
-             <h2 class="text-xl font-semibold text-gray-800">Rapor Başarıyla Oluşturuldu</h2>
-             <p class="text-gray-600 mt-2">Aşağıdaki butonu kullanarak raporunuzu indirebilirsiniz.</p>
-             <button id="download-docx" class="mt-4 inline-flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
-                <i data-lucide="file-text"></i>
-                <span>Raporu Word Olarak İndir (.docx)</span>
-            </button>
+             <h2 class="text-xl font-semibold text-gray-800">Rapor Parçaları Hazır</h2>
+             <p class="text-gray-600 mt-2">Raporunuz büyük olduğu için parçalar halinde oluşturulmuştur. Lütfen tüm parçaları sırasıyla indirin.</p>
+             <div id="download-buttons-container" class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
          </div>
 
     </main>
@@ -79,9 +85,9 @@
         const feedbackText = document.getElementById('feedback-text');
         const errorArea = document.getElementById('error-area');
         const outputArea = document.getElementById('output');
-        const downloadDocxButton = document.getElementById('download-docx');
+        const downloadButtonsContainer = document.getElementById('download-buttons-container');
 
-        let finalReportData = [];
+        let allReportData = [];
 
         const processPdfPage = async (pdfDoc, pageNum, scale = 1.8) => {
             try {
@@ -100,21 +106,32 @@
             }
         };
         
-        const getTitleFromServer = async (base64Image) => {
+        const getTitleFromAI = async (base64Image, apiKey) => {
              try {
-                const response = await fetch('/.netlify/functions/get-title', {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                const payload = {
+                    "contents": [{
+                        "parts": [
+                            { "text": "Bu akademik makale sayfasındaki en büyük ve en belirgin metin olan ana başlığı çıkar. Sadece ve sadece tam başlığı döndür." },
+                            { "inline_data": { "mime_type": "image/jpeg", "data": base64Image } }
+                        ]
+                    }]
+                };
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ imageBase64: base64Image }),
+                    body: JSON.stringify(payload),
                 });
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error || `Sunucu başlık alırken hata verdi: ${response.status}`);
+                    throw new Error(errorData.error.message || `API Hatası: ${response.status}`);
                 }
-                const { title } = await response.json();
+                const { candidates } = await response.json();
+                let title = candidates[0].content.parts[0].text;
+                title = title.replace(/\$_{([^}]+)}/g, '$1').replace(/\$/g, '').replace(/\n/g, ' ');
                 return title;
              } catch (error) {
-                console.error("getTitleFromServer Hatası:", error);
+                console.error("getTitleFromAI Hatası:", error);
                 return null;
              }
         };
@@ -134,7 +151,7 @@
                         </div>`;
 
             reportData.forEach((data, index) => {
-                const sectionIndex = index + 1;
+                const sectionIndex = data.originalIndex + 1;
                 const MAX_WIDTH_PX = 605;
 
                 const getImageTag = (base64) => {
@@ -169,7 +186,17 @@
             feedbackArea.classList.remove('hidden');
             errorArea.classList.add('hidden');
             outputArea.classList.add('hidden');
-            finalReportData = [];
+            downloadButtonsContainer.innerHTML = '';
+            allReportData = [];
+
+            const apiKey = document.getElementById('api-key').value;
+            if (!apiKey) {
+                alert('Lütfen Google AI API anahtarınızı girin.');
+                generateButton.disabled = false;
+                generateButton.querySelector('span').textContent = 'Raporları Oluştur';
+                feedbackArea.classList.add('hidden');
+                return;
+            }
 
             const citationFiles = Array.from(document.getElementById('citation-files').files);
             const publicationInfoPdfs = Array.from(document.getElementById('publication-info-pdfs').files);
@@ -197,7 +224,7 @@
                     const pubPdfDoc = await pdfjsLib.getDocument(new Uint8Array(pubFileBuffer)).promise;
 
                     const firstPageImageForAI = await processPdfPage(citPdfDoc, 1, 1.5);
-                    const title = await getTitleFromServer(firstPageImageForAI) || `[Başlık Alınamadı] - ${citFile.name.replace('.pdf','')}`;
+                    const title = await getTitleFromAI(firstPageImageForAI, apiKey) || `[Başlık Alınamadı] - ${citFile.name.replace('.pdf','')}`;
                     
                     const unvanImg = await processPdfPage(pubPdfDoc, 1);
                     const baslikImg = await processPdfPage(citPdfDoc, 1);
@@ -221,11 +248,37 @@
                         }
                     }
 
-                    finalReportData.push({ title, unvanImg, baslikImg, atifImgs, kaynakcaImgs });
+                    allReportData.push({ title, unvanImg, baslikImg, atifImgs, kaynakcaImgs, originalIndex: i });
                 }
                 
                 feedbackArea.classList.add('hidden');
                 outputArea.classList.remove('hidden');
+
+                const BATCH_SIZE = 20;
+                for (let i = 0; i < allReportData.length; i += BATCH_SIZE) {
+                    const batchData = allReportData.slice(i, i + BATCH_SIZE);
+                    const startNum = i + 1;
+                    const endNum = i + batchData.length;
+
+                    const button = document.createElement('button');
+                    button.className = "inline-flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300";
+                    button.innerHTML = `<i data-lucide="file-text"></i> <span>Rapor (${startNum}-${endNum}) İndir</span>`;
+                    
+                    button.addEventListener('click', () => {
+                        const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
+                        const eserYokId = document.getElementById('eser-yok-id').value;
+                        const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Part_${startNum}-${endNum}.docx`;
+                        
+                        const wordHTML = buildWordHTML(eserAdi, eserYokId, batchData);
+                        
+                        try {
+                            const converted = htmlDocx.asBlob(wordHTML, { orientation: 'portrait', margins: { top: 720, bottom: 720, left: 720, right: 720 }});
+                            saveAs(converted, fileName);
+                        } catch(e) { console.error('Word export failed:', e); alert('Rapor parçası indirilirken bir hata oluştu.'); }
+                    });
+                    downloadButtonsContainer.appendChild(button);
+                    lucide.createIcons();
+                }
 
             } catch (error) {
                 console.error('Rapor oluşturma hatası:', error);
@@ -234,22 +287,8 @@
                 feedbackArea.classList.add('hidden');
             } finally {
                 generateButton.disabled = false;
-                generateButton.querySelector('span').textContent = 'Rapor Oluştur';
+                generateButton.querySelector('span').textContent = 'Raporları Oluştur';
             }
-        });
-
-        downloadDocxButton.addEventListener('click', () => {
-             if (finalReportData.length === 0) { alert('Önce rapor oluşturmalısınız.'); return; }
-            const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
-            const eserYokId = document.getElementById('eser-yok-id').value;
-            const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
-            
-            const wordHTML = buildWordHTML(eserAdi, eserYokId, finalReportData);
-            
-            try {
-                const converted = htmlDocx.asBlob(wordHTML, { orientation: 'portrait', margins: { top: 720, bottom: 720, left: 720, right: 720 }});
-                saveAs(converted, fileName);
-            } catch(e) { console.error('Word export failed:', e); alert('Rapor Word dosyasına dönüştürülürken bir hata oluştu.'); }
         });
     });
     </script>
