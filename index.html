@@ -51,13 +51,22 @@
             <div class="flex justify-center items-center">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
-            <p id="feedback-text" class="text-gray-700 font-medium">Rapor oluşturuluyor... Bu işlem dosya sayısına göre birkaç dakika sürebilir. Lütfen bekleyiniz.</p>
+            <p id="feedback-text" class="text-gray-700 font-medium">Rapor oluşturuluyor...</p>
         </div>
          <div id="error-area" class="hidden text-center py-4 px-4 bg-red-50 text-red-700 rounded-lg"></div>
+         <div id="output" class="hidden text-center pt-6 border-t">
+             <h2 class="text-xl font-semibold text-gray-800">Rapor Başarıyla Oluşturuldu</h2>
+             <p class="text-gray-600 mt-2">Aşağıdaki butonu kullanarak raporunuzu indirebilirsiniz.</p>
+             <button id="download-docx" class="mt-4 inline-flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
+                <i data-lucide="file-text"></i>
+                <span>Raporu Word Olarak İndir (.docx)</span>
+            </button>
+         </div>
 
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
@@ -65,7 +74,54 @@
         const reportForm = document.getElementById('report-form');
         const generateButton = document.getElementById('generate-button');
         const feedbackArea = document.getElementById('feedback');
+        const feedbackText = document.getElementById('feedback-text');
         const errorArea = document.getElementById('error-area');
+        const outputArea = document.getElementById('output');
+        const downloadDocxButton = document.getElementById('download-docx');
+
+        let finalReportData = [];
+
+        const buildWordHTML = (reportTitle, reportYokId, reportData) => {
+            let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
+            reportData.forEach(data => {
+                titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`;
+            });
+            titleListHTML += '</ol>';
+
+            let html = `<div style="text-align:center;">
+                            <h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1>
+                            <p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p>
+                            <h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>
+                            ${titleListHTML}
+                        </div>`;
+
+            reportData.forEach((data, index) => {
+                const sectionIndex = index + 1;
+                const MAX_WIDTH_PX = 605; // 16cm
+
+                const getImageTag = (base64) => {
+                    if (!base64) return '<p>[Görsel işlenemedi]</p>';
+                    return `<img src="data:image/jpeg;base64,${base64}" width="${MAX_WIDTH_PX}" style="width: ${MAX_WIDTH_PX}px; height: auto;">`;
+                };
+
+                const createSection = (title, imgData) => {
+                    const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('') : getImageTag(imgData);
+                    return `<table style="page-break-inside: avoid; width: 100%; margin-top: 1rem;"><tr><td>
+                                <h4 style="font-size:12pt; font-weight:bold;">${title}</h4>
+                                ${content}
+                            </td></tr></table>`;
+                };
+                
+                html += `<div style="page-break-before: always;">
+                            <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
+                            ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
+                            ${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
+                            ${createSection(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
+                            ${createSection(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
+                        </div>`;
+            });
+            return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${html}</body></html>`;
+        };
 
         reportForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -74,41 +130,76 @@
             generateButton.querySelector('span').textContent = 'Oluşturuluyor...';
             feedbackArea.classList.remove('hidden');
             errorArea.classList.add('hidden');
+            outputArea.classList.add('hidden');
+            finalReportData = [];
 
-            const formData = new FormData(reportForm);
-            
+            const citationFiles = Array.from(document.getElementById('citation-files').files);
+            const publicationInfoPdfs = Array.from(document.getElementById('publication-info-pdfs').files);
+
+            if (citationFiles.length !== publicationInfoPdfs.length) {
+                alert('Atıf PDF sayısı ile yayın bilgisi PDF sayısı eşit olmalıdır.');
+                generateButton.disabled = false;
+                return;
+            }
+
+            const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+            citationFiles.sort(naturalSort);
+            publicationInfoPdfs.sort(naturalSort);
+
+            const BATCH_SIZE = 5; // Tek seferde 5 dosya gönder
+            let processedCount = 0;
+
             try {
-                // Sunucudaki yardımcı fonksiyona dosyaları gönderiyoruz
-                const response = await fetch('/.netlify/functions/generate-report', {
-                    method: 'POST',
-                    body: formData,
-                });
+                for (let i = 0; i < citationFiles.length; i += BATCH_SIZE) {
+                    const batchCitationFiles = citationFiles.slice(i, i + BATCH_SIZE);
+                    const batchPublicationFiles = publicationInfoPdfs.slice(i, i + BATCH_SIZE);
+                    
+                    const formData = new FormData();
+                    batchCitationFiles.forEach(file => formData.append('citation-files', file));
+                    batchPublicationFiles.forEach(file => formData.append('publication-info-pdfs', file));
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Sunucuda bir hata oluştu.');
+                    feedbackText.textContent = `Atıf grupları işleniyor... (${processedCount}/${citationFiles.length})`;
+                    
+                    const response = await fetch('/.netlify/functions/process-batch', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `Sunucu ${i+1}. grupta hata verdi.`);
+                    }
+
+                    const batchResult = await response.json();
+                    finalReportData.push(...batchResult);
+                    processedCount += batchCitationFiles.length;
                 }
                 
-                // Sunucudan gelen Word dosyasını alıyoruz
-                const blob = await response.blob();
-                const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
-                const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
-                
-                // Dosyayı kullanıcıya indiriyoruz
-                saveAs(blob, fileName);
-
                 feedbackArea.classList.add('hidden');
-                alert('Rapor başarıyla oluşturuldu ve indirildi!');
+                outputArea.classList.remove('hidden');
 
             } catch (error) {
                 console.error('Rapor oluşturma hatası:', error);
                 errorArea.textContent = `Hata: ${error.message}`;
                 errorArea.classList.remove('hidden');
                 feedbackArea.classList.add('hidden');
-            } finally {
                 generateButton.disabled = false;
                 generateButton.querySelector('span').textContent = 'Rapor Oluştur';
             }
+        });
+
+        downloadDocxButton.addEventListener('click', () => {
+             if (finalReportData.length === 0) { alert('Önce rapor oluşturmalısınız.'); return; }
+            const eserAdi = document.getElementById('eser-adi').value || 'Rapor';
+            const eserYokId = document.getElementById('eser-yok-id').value;
+            const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Raporu.docx`;
+            
+            const wordHTML = buildWordHTML(eserAdi, eserYokId, finalReportData);
+            
+            try {
+                const converted = htmlDocx.asBlob(wordHTML, { orientation: 'portrait', margins: { top: 720, bottom: 720, left: 720, right: 720 }});
+                saveAs(converted, fileName);
+            } catch(e) { console.error('Word export failed:', e); alert('Rapor Word dosyasına dönüştürülürken bir hata oluştu.'); }
         });
     });
     </script>
