@@ -150,32 +150,43 @@
             
             try {
                 for (let i = 0; i < citationFiles.length; i++) {
-                    const formData = new FormData();
-                    formData.append('citation-file', citationFiles[i]);
-                    formData.append('publication-info-pdf', publicationInfoPdfs[i]);
-
-                    feedbackText.textContent = `Atıf ${i + 1} / ${citationFiles.length} işleniyor...`;
+                    const citFile = citationFiles[i];
+                    const pubFile = publicationInfoPdfs[i];
                     
-                    const response = await fetch('/.netlify/functions/process-single-file', {
+                    // Adım 1: Başlığı al
+                    feedbackText.textContent = `Atıf ${i + 1}/${citationFiles.length}: Başlık taranıyor...`;
+                    const titleFormData = new FormData();
+                    titleFormData.append('citation-file', citFile);
+                    
+                    const titleResponse = await fetch('/.netlify/functions/get-title', {
                         method: 'POST',
-                        body: formData,
+                        body: titleFormData,
                     });
 
-                    if (!response.ok) {
-                        let errorMsg = `Sunucu ${i+1}. dosyada hata verdi. (Status: ${response.status})`;
-                        try {
-                            // Sunucudan JSON formatında bir hata mesajı gelmiş olabilir.
-                            const errorData = await response.json();
-                            errorMsg = errorData.error || errorMsg;
-                        } catch(e) { 
-                            // Gelen cevap JSON değilse (örneğin Netlify 404 sayfası), genel bir hata ver.
-                            errorMsg = `Sunucuya ulaşılamıyor veya sunucu 'process-single-file' yardımcısını bulamadı. (Status: ${response.status})`;
-                        }
-                        throw new Error(errorMsg);
+                    if (!titleResponse.ok) {
+                         const errorText = await titleResponse.text();
+                         throw new Error(`Başlık alınırken hata oluştu (${citFile.name}): ${errorText}`);
                     }
+                    const { title } = await titleResponse.json();
 
-                    const result = await response.json();
-                    finalReportData.push(result);
+                    // Adım 2: PDF sayfalarını işle
+                    feedbackText.textContent = `Atıf ${i + 1}/${citationFiles.length}: Sayfalar işleniyor...`;
+                    const pdfFormData = new FormData();
+                    pdfFormData.append('citation-file', citFile);
+                    pdfFormData.append('publication-info-pdf', pubFile);
+                    
+                    const pdfResponse = await fetch('/.netlify/functions/process-pdf', {
+                        method: 'POST',
+                        body: pdfFormData,
+                    });
+
+                    if (!pdfResponse.ok) {
+                        const errorText = await pdfResponse.text();
+                        throw new Error(`PDF işlenirken hata oluştu (${citFile.name}): ${errorText}`);
+                    }
+                    const pdfData = await pdfResponse.json();
+
+                    finalReportData.push({ title: title || `[Başlık Alınamadı] - ${citFile.name}`, ...pdfData });
                 }
                 
                 feedbackArea.classList.add('hidden');
