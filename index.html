@@ -139,40 +139,39 @@
             if (citationFiles.length !== publicationInfoPdfs.length) {
                 alert('Atıf PDF sayısı ile yayın bilgisi PDF sayısı eşit olmalıdır.');
                 generateButton.disabled = false;
+                generateButton.querySelector('span').textContent = 'Rapor Oluştur';
+                feedbackArea.classList.add('hidden');
                 return;
             }
 
             const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
             citationFiles.sort(naturalSort);
             publicationInfoPdfs.sort(naturalSort);
-
-            const BATCH_SIZE = 5; // Tek seferde 5 dosya gönder
-            let processedCount = 0;
-
+            
             try {
-                for (let i = 0; i < citationFiles.length; i += BATCH_SIZE) {
-                    const batchCitationFiles = citationFiles.slice(i, i + BATCH_SIZE);
-                    const batchPublicationFiles = publicationInfoPdfs.slice(i, i + BATCH_SIZE);
-                    
+                for (let i = 0; i < citationFiles.length; i++) {
                     const formData = new FormData();
-                    batchCitationFiles.forEach(file => formData.append('citation-files', file));
-                    batchPublicationFiles.forEach(file => formData.append('publication-info-pdfs', file));
+                    formData.append('citation-file', citationFiles[i]);
+                    formData.append('publication-info-pdf', publicationInfoPdfs[i]);
 
-                    feedbackText.textContent = `Atıf grupları işleniyor... (${processedCount}/${citationFiles.length})`;
+                    feedbackText.textContent = `Atıf ${i + 1} / ${citationFiles.length} işleniyor...`;
                     
-                    const response = await fetch('/.netlify/functions/process-batch', {
+                    const response = await fetch('/.netlify/functions/process-single-file', {
                         method: 'POST',
                         body: formData,
                     });
 
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || `Sunucu ${i+1}. grupta hata verdi.`);
+                        let errorMsg = `Sunucu ${i+1}. dosyada hata verdi. (Status: ${response.status})`;
+                        try {
+                            const errorData = await response.json();
+                            errorMsg = errorData.error || errorMsg;
+                        } catch(e) { /* Ignore if response is not json */ }
+                        throw new Error(errorMsg);
                     }
 
-                    const batchResult = await response.json();
-                    finalReportData.push(...batchResult);
-                    processedCount += batchCitationFiles.length;
+                    const result = await response.json();
+                    finalReportData.push(result);
                 }
                 
                 feedbackArea.classList.add('hidden');
@@ -183,6 +182,7 @@
                 errorArea.textContent = `Hata: ${error.message}`;
                 errorArea.classList.remove('hidden');
                 feedbackArea.classList.add('hidden');
+            } finally {
                 generateButton.disabled = false;
                 generateButton.querySelector('span').textContent = 'Rapor Oluştur';
             }
