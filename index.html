@@ -115,7 +115,6 @@
             return null;
         }
 
-        // *** DÜZELTME: Model adı doğru formatta yazıldı ***
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
         const base64Data = imageDataUrl.split(',')[1];
         const payload = {
@@ -153,7 +152,6 @@
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale });
             const canvas = document.createElement('canvas');
-            // *** DÜZELTME: Tarayıcıya performans ipucu veriliyor ***
             const context = canvas.getContext('2d', { willReadFrequently: true });
             canvas.height = viewport.height;
             canvas.width = viewport.width;
@@ -181,7 +179,8 @@
 
         reportData.forEach((data, index) => {
             const sectionIndex = index + 1;
-            const MAX_WIDTH_PX = 680; // 18cm
+            // *** DEĞİŞİKLİK: Resim boyutu 16cm olarak güncellendi ***
+            const MAX_WIDTH_PX = 605; // 16cm
 
             const getImageTag = (imgData) => {
                 if (!imgData) return '<p>[Görsel işlenemedi]</p>';
