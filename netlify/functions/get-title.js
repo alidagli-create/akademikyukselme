@@ -1,7 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 exports.handler = async (event) => {
-    // Güvenlik kontrolü: Sadece POST isteklerini kabul et
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
@@ -40,4 +39,3 @@ exports.handler = async (event) => {
         return { statusCode: 500, body: JSON.stringify({ error: 'Başlık alınırken sunucuda bir hata meydana geldi.' }) };
     }
 };
-
