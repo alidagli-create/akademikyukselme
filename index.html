@@ -140,21 +140,25 @@
              }
         };
 
-        const buildWordHTML = (reportTitle, reportYokId, reportData) => {
-            let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
-            reportData.forEach(data => {
-                titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`;
-            });
-            titleListHTML += '</ol>';
+        const buildWordHTML = (reportTitle, reportYokId, batchData, fullData, isFirstPart) => {
+            let html = '';
 
-            let html = `<div style="text-align:center;">
+            if (isFirstPart) {
+                let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
+                fullData.forEach(data => {
+                    titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`;
+                });
+                titleListHTML += '</ol>';
+
+                html += `<div style="text-align:center;">
                             <h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1>
                             <p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p>
                             <h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>
                             ${titleListHTML}
                         </div>`;
+            }
 
-            reportData.forEach((data, index) => {
+            batchData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
                 const MAX_WIDTH_PX = 605; // 16cm
 
@@ -173,7 +177,9 @@
                             </td></tr></table>`;
                 };
                 
-                html += `<div style="page-break-before: always;">
+                const pageBreakStyle = (isFirstPart && index === 0) ? '' : 'page-break-before: always;';
+
+                html += `<div style="${pageBreakStyle}">
                             <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
                             ${createSection(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
                             ${createSection(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
@@ -265,6 +271,7 @@
                     const batchData = allReportData.slice(i, i + BATCH_SIZE);
                     const startNum = i + 1;
                     const endNum = i + batchData.length;
+                    const isFirstBatch = (i === 0);
 
                     const button = document.createElement('button');
                     button.className = "inline-flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300";
@@ -275,7 +282,7 @@
                         const eserYokId = document.getElementById('eser-yok-id').value;
                         const fileName = `${eserAdi.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')}_Part_${startNum}-${endNum}.docx`;
                         
-                        const wordHTML = buildWordHTML(eserAdi, eserYokId, batchData);
+                        const wordHTML = buildWordHTML(eserAdi, eserYokId, batchData, allReportData, isFirstBatch);
                         
                         try {
                             const converted = htmlDocx.asBlob(wordHTML, { orientation: 'portrait', margins: { top: 720, bottom: 720, left: 720, right: 720 }});
