@@ -181,68 +181,46 @@
                 const targetHeightPixels = Math.round(TARGET_WIDTH_PIXELS * aspectRatio);
                 return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" height="${targetHeightPixels}" style="width:${TARGET_WIDTH_PIXELS}px; height:${targetHeightPixels}px;">`;
             };
-
-            const createSectionAsTable = (title, imgData) => {
+            
+            // *** YENİ, KESİN ÇÖZÜM İÇİN YAPI ***
+            // Bu fonksiyon başlığı ve resmi bir div içine koyar.
+            // Bu div'in kendisi sayfa sonu komutunu alacak.
+            const createSectionBlock = (mainTitle, subTitle, imgData) => {
+                const mainTitleHtml = mainTitle ? `<h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">${mainTitle}</h3>` : '';
                 const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('<br>') : getImageTag(imgData);
-                return `<table style="width: 100%; page-break-inside: avoid;">
-                            <tr>
-                                <td>
-                                    <h4 style="font-size:12pt; font-weight:bold; margin-top: 1rem; margin-bottom: 0.5rem;">${title}</h4>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    ${content}
-                                </td>
-                            </tr>
-                        </table>`;
+
+                return `<div style="page-break-inside: avoid;">
+                            ${mainTitleHtml}
+                            <h4 style="font-size:12pt; font-weight:bold; margin-top: 1rem; margin-bottom: 0.5rem;">${subTitle}</h4>
+                            ${content}
+                        </div>`;
             };
 
             if (isFirstPart) {
                 let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
                 fullData.forEach(data => { titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`; });
                 titleListHTML += '</ol>';
-                // *** 1. DÜZENLEME: Kapak sayfası bittikten sonra yeni sayfaya geç ***
-                html += `<div style="text-align:center; page-break-after: always;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
+                html += `<div style="text-align:center;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
             }
 
             batchData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
                 
-                // *** 2. DÜZENLEME: Her görsel bloğundan sonra yeni sayfaya geç ***
-                
-                // Her "Atıf" bloğu için yeni bir sayfa aç (eğer rapordaki ilk Atıf değilse)
-                const pageBreakForAtif = (isFirstPart && index === 0) ? '' : 'page-break-before: always;';
+                // Kapak sayfası ve her "Atıf" bloğu için sayfa sonu eklenir.
+                const pageBreakStyle = 'page-break-before: always;';
 
-                // Atıf başlığı ve ilk bölüm (Ünvan) AYNI sayfada, SONRA sayfa sonu
-                html += `
-                    <div style="${pageBreakForAtif} page-break-after: always;">
-                        <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
-                        ${createSectionAsTable(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
-                    </div>
-                `;
-
-                // Başlık sayfası BİR sayfada, SONRA sayfa sonu
-                html += `
-                    <div style="page-break-after: always;">
-                        ${createSectionAsTable(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
-                    </div>
-                `;
-
-                // Atıf sayfası BİR sayfada, SONRA sayfa sonu
-                html += `
-                    <div style="page-break-after: always;">
-                        ${createSectionAsTable(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
-                    </div>
-                `;
-                
-                // Kaynakça sayfası (SON BÖLÜM) BİR sayfada, SONRA sayfa sonu YOK
-                // Bu sayede her Atıf bloğundan sonra boş bir sayfa oluşmaz.
-                html += `
-                    <div>
-                        ${createSectionAsTable(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
-                    </div>
-                `;
+                html += `<div style="${pageBreakStyle}">
+                            ${createSectionBlock(`Atıf ${sectionIndex}`, `A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
+                         </div>`;
+                html += `<div style="${pageBreakStyle}">
+                            ${createSectionBlock('', `A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
+                         </div>`;
+                html += `<div style="${pageBreakStyle}">
+                            ${createSectionBlock('', `A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
+                         </div>`;
+                html += `<div style="${pageBreakStyle}">
+                            ${createSectionBlock('', `A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
+                         </div>`;
             });
             return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${html}</body></html>`;
         };
