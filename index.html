@@ -176,18 +176,14 @@
 
             const getImageTag = (imgData) => {
                 if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
-                // *** GÖRSEL BOYUTU DAHA DA BÜYÜTÜLDÜ ***
                 const TARGET_WIDTH_PIXELS = 900;
                 const aspectRatio = imgData.height / imgData.width;
                 const targetHeightPixels = Math.round(TARGET_WIDTH_PIXELS * aspectRatio);
                 return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" height="${targetHeightPixels}" style="width:${TARGET_WIDTH_PIXELS}px; height:${targetHeightPixels}px;">`;
             };
 
-            // *** SAYFA DÜZENİ SORUNUNU ÇÖZMEK İÇİN YENİ YAPI ***
-            // Bu fonksiyon başlığı ve resmi, ayrılmaması için bir tablo içine koyar.
             const createSectionAsTable = (title, imgData) => {
                 const content = Array.isArray(imgData) ? imgData.map(getImageTag).join('<br>') : getImageTag(imgData);
-                // page-break-inside: avoid komutu tablonun bölünmesini engeller
                 return `<table style="width: 100%; page-break-inside: avoid;">
                             <tr>
                                 <td>
@@ -206,31 +202,44 @@
                 let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
                 fullData.forEach(data => { titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`; });
                 titleListHTML += '</ol>';
-                // İlk ana başlık sayfası. Kendisinden sonra yeni sayfa açar.
+                // *** 1. DÜZENLEME: Kapak sayfası bittikten sonra yeni sayfaya geç ***
                 html += `<div style="text-align:center; page-break-after: always;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
             }
 
             batchData.forEach((data, index) => {
                 const sectionIndex = data.originalIndex + 1;
                 
+                // *** 2. DÜZENLEME: Her görsel bloğundan sonra yeni sayfaya geç ***
+                
                 // Her "Atıf" bloğu için yeni bir sayfa aç (eğer rapordaki ilk Atıf değilse)
                 const pageBreakForAtif = (isFirstPart && index === 0) ? '' : 'page-break-before: always;';
 
-                // BÖLÜMLERİN OLUŞTURULDUĞU YER
-                // 1. Atıf ana başlığı ve ilk bölüm (Ünvan Sayfası) AYNI SAYFADA
-                // 2. Diğer bölümlerin her biri KENDİ YENİ SAYFASINDA
+                // Atıf başlığı ve ilk bölüm (Ünvan) AYNI sayfada, SONRA sayfa sonu
                 html += `
-                    <div style="${pageBreakForAtif}">
+                    <div style="${pageBreakForAtif} page-break-after: always;">
                         <h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">Atıf ${sectionIndex}</h3>
                         ${createSectionAsTable(`A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)}
                     </div>
-                    <div style="page-break-before: always;">
+                `;
+
+                // Başlık sayfası BİR sayfada, SONRA sayfa sonu
+                html += `
+                    <div style="page-break-after: always;">
                         ${createSectionAsTable(`A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)}
                     </div>
-                    <div style="page-break-before: always;">
+                `;
+
+                // Atıf sayfası BİR sayfada, SONRA sayfa sonu
+                html += `
+                    <div style="page-break-after: always;">
                         ${createSectionAsTable(`A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)}
                     </div>
-                    <div style="page-break-before: always;">
+                `;
+                
+                // Kaynakça sayfası (SON BÖLÜM) BİR sayfada, SONRA sayfa sonu YOK
+                // Bu sayede her Atıf bloğundan sonra boş bir sayfa oluşmaz.
+                html += `
+                    <div>
                         ${createSectionAsTable(`A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)}
                     </div>
                 `;
