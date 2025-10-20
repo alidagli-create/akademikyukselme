@@ -65,11 +65,13 @@
 
     </main>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         const reportForm = document.getElementById('report-form');
         const generateButton = document.getElementById('generate-button');
@@ -80,6 +82,42 @@
         const downloadDocxButton = document.getElementById('download-docx');
 
         let finalReportData = [];
+
+        const processPdfPage = async (pdfDoc, pageNum, scale = 1.8) => {
+            try {
+                if (pageNum > pdfDoc.numPages) return null;
+                const page = await pdfDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d', { willReadFrequently: true });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                return canvas.toDataURL('image/jpeg', 0.85).split(',')[1]; // Sadece base64 verisi
+            } catch (e) {
+                console.error(`Error processing PDF page ${pageNum}:`, e);
+                return null;
+            }
+        };
+        
+        const getTitleFromServer = async (base64Image) => {
+             try {
+                const response = await fetch('/.netlify/functions/get-title', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: base64Image }),
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Sunucu başlık alırken hata verdi: ${response.status}`);
+                }
+                const { title } = await response.json();
+                return title;
+             } catch (error) {
+                console.error("getTitleFromServer Hatası:", error);
+                return null;
+             }
+        };
 
         const buildWordHTML = (reportTitle, reportYokId, reportData) => {
             let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
@@ -97,7 +135,7 @@
 
             reportData.forEach((data, index) => {
                 const sectionIndex = index + 1;
-                const MAX_WIDTH_PX = 605; // 16cm
+                const MAX_WIDTH_PX = 605;
 
                 const getImageTag = (base64) => {
                     if (!base64) return '<p>[Görsel işlenemedi]</p>';
@@ -138,8 +176,7 @@
 
             if (citationFiles.length !== publicationInfoPdfs.length) {
                 alert('Atıf PDF sayısı ile yayın bilgisi PDF sayısı eşit olmalıdır.');
-                generateButton.disabled = false;
-                return;
+                generateButton.disabled = false; return;
             }
 
             const naturalSort = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
@@ -151,38 +188,40 @@
                     const citFile = citationFiles[i];
                     const pubFile = publicationInfoPdfs[i];
                     
-                    // Adım 1: Başlığı al
-                    feedbackText.textContent = `Atıf ${i + 1}/${citationFiles.length}: Başlık taranıyor...`;
-                    const titleFormData = new FormData();
-                    titleFormData.append('citation-file', citFile);
-                    
-                    const titleResponse = await fetch('/.netlify/functions/get-title', {
-                        method: 'POST',
-                        body: titleFormData,
-                    });
-                    if (!titleResponse.ok) {
-                         const errorData = await titleResponse.json();
-                         throw new Error(`Başlık alınırken hata oluştu (${citFile.name}): ${errorData.error}`);
-                    }
-                    const { title } = await titleResponse.json();
+                    feedbackText.textContent = `Atıf ${i + 1}/${citationFiles.length} işleniyor...`;
 
-                    // Adım 2: PDF sayfalarını işle
-                    feedbackText.textContent = `Atıf ${i + 1}/${citationFiles.length}: Sayfalar işleniyor...`;
-                    const pdfFormData = new FormData();
-                    pdfFormData.append('citation-file', citFile);
-                    pdfFormData.append('publication-info-pdf', pubFile);
+                    const citFileBuffer = await citFile.arrayBuffer();
+                    const pubFileBuffer = await pubFile.arrayBuffer();
                     
-                    const pdfResponse = await fetch('/.netlify/functions/process-pdf', {
-                        method: 'POST',
-                        body: pdfFormData,
-                    });
-                    if (!pdfResponse.ok) {
-                        const errorData = await pdfResponse.json();
-                        throw new Error(`PDF işlenirken hata oluştu (${citFile.name}): ${errorData.error}`);
-                    }
-                    const pdfData = await pdfResponse.json();
+                    const citPdfDoc = await pdfjsLib.getDocument(new Uint8Array(citFileBuffer)).promise;
+                    const pubPdfDoc = await pdfjsLib.getDocument(new Uint8Array(pubFileBuffer)).promise;
 
-                    finalReportData.push({ title: title || `[Başlık Alınamadı] - ${citFile.name.replace('.pdf','')}`, ...pdfData });
+                    const firstPageImageForAI = await processPdfPage(citPdfDoc, 1, 1.5);
+                    const title = await getTitleFromServer(firstPageImageForAI) || `[Başlık Alınamadı] - ${citFile.name.replace('.pdf','')}`;
+                    
+                    const unvanImg = await processPdfPage(pubPdfDoc, 1);
+                    const baslikImg = await processPdfPage(citPdfDoc, 1);
+                    
+                    const totalPages = citPdfDoc.numPages;
+                    const atifImgs = [];
+                    const kaynakcaImgs = [];
+
+                    if (totalPages === 2) {
+                        atifImgs.push(await processPdfPage(citPdfDoc, 1));
+                        kaynakcaImgs.push(await processPdfPage(citPdfDoc, 2));
+                    } else if (totalPages === 3) {
+                        atifImgs.push(await processPdfPage(citPdfDoc, 2));
+                        kaynakcaImgs.push(await processPdfPage(citPdfDoc, 3));
+                    } else if (totalPages >= 4) {
+                        atifImgs.push(await processPdfPage(citPdfDoc, 2));
+                        atifImgs.push(await processPdfPage(citPdfDoc, 3));
+                        kaynakcaImgs.push(await processPdfPage(citPdfDoc, 4));
+                        if (totalPages >= 5) {
+                            kaynakcaImgs.push(await processPdfPage(citPdfDoc, 5));
+                        }
+                    }
+
+                    finalReportData.push({ title, unvanImg, baslikImg, atifImgs, kaynakcaImgs });
                 }
                 
                 feedbackArea.classList.add('hidden');
