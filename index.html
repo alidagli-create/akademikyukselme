@@ -172,7 +172,7 @@
         };
 
         const buildWordHTML = (reportTitle, reportYokId, batchData, fullData, isFirstPart) => {
-            let html = '';
+            let pages = [];
 
             const getImageTag = (imgData) => {
                 if (!imgData || !imgData.base64) return '<p>[Görsel işlenemedi]</p>';
@@ -182,7 +182,6 @@
                 return `<img src="data:image/jpeg;base64,${imgData.base64}" width="${TARGET_WIDTH_PIXELS}" height="${targetHeightPixels}" style="width:${TARGET_WIDTH_PIXELS}px; height:${targetHeightPixels}px;">`;
             };
             
-            // Bu fonksiyon SADECE içeriği oluşturur, sayfa sonu mantığı içermez.
             const createContentBlock = (mainTitle, subTitle, imgData) => {
                 const mainTitleHtml = mainTitle ? `<h3 style="font-size:14pt; font-weight:bold; margin-top: 2rem;">${mainTitle}</h3>` : '';
                 const subTitleHtml = subTitle ? `<h4 style="font-size:12pt; font-weight:bold; margin-top: 1rem; margin-bottom: 0.5rem;">${subTitle}</h4>` : '';
@@ -190,45 +189,28 @@
                 return `${mainTitleHtml}${subTitleHtml}${imageHtml}`;
             };
 
-            // Bu fonksiyon bir içeriği alır ve onu YENİ BİR SAYFA haline getirir.
-            const createPage = (content) => {
-                return `<div style="page-break-before: always;">${content}</div>`;
-            };
-
-            // SAYFA 1: Kapak Sayfası
-            if (isFirstPart) {
+            if (isFirstBatch) {
                 let titleListHTML = '<ol style="list-style-type: decimal; padding-left: 20px; margin-bottom: 2rem; text-align: left;">';
                 fullData.forEach(data => { titleListHTML += `<li style="margin-bottom: 0.5rem;">${data.title}</li>`; });
                 titleListHTML += '</ol>';
-                // Kapak sayfası içeriği
-                html += `<div><div style="text-align:center;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div></div>`;
+                const coverPageContent = `<div style="text-align:center;"><h1 style="font-size: 24pt; font-weight: bold;">${reportTitle}</h1><p style="font-size: 14pt;">YÖK ID: ${reportYokId}</p><h2 style="font-size: 18pt; font-weight: bold; margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">Atıflar</h2>${titleListHTML}</div>`;
+                pages.push(coverPageContent);
             }
 
-            // Diğer Sayfalar
-            batchData.forEach((data, index) => {
+            batchData.forEach((data) => {
                 const sectionIndex = data.originalIndex + 1;
                 
-                // SAYFA 2: Atıf + Ünvan Sayfası
-                html += createPage(
-                    createContentBlock(`Atıf ${sectionIndex}`, `A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg)
-                );
-
-                // SAYFA 3: Başlık Sayfası
-                html += createPage(
-                    createContentBlock(null, `A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg)
-                );
-
-                // SAYFA 4: Atıf Yapılan Sayfa
-                html += createPage(
-                    createContentBlock(null, `A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs)
-                );
-
-                // SAYFA 5: Kaynakça Sayfası
-                html += createPage(
-                    createContentBlock(null, `A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs)
-                );
+                pages.push(createContentBlock(`Atıf ${sectionIndex}`, `A${sectionIndex}. Yayının Ünvan Sayfası`, data.unvanImg));
+                pages.push(createContentBlock(null, `A${sectionIndex}. Eserin Başlık Sayfası`, data.baslikImg));
+                pages.push(createContentBlock(null, `A${sectionIndex}. Eserde ilk atıf yapılan sayfa`, data.atifImgs));
+                pages.push(createContentBlock(null, `A${sectionIndex}. Kaynakça Sayfası`, data.kaynakcaImgs));
             });
-            return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${html}</body></html>`;
+            
+            // Sayfaları, aralarına manuel sayfa sonu ekleyerek birleştir
+            const pageBreak = `<br style="page-break-before:always">`;
+            const finalHtml = pages.join(pageBreak);
+
+            return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style> * { font-family: 'Times New Roman', serif; } </style></head><body>${finalHtml}</body></html>`;
         };
 
         reportForm.addEventListener('submit', async (event) => {
